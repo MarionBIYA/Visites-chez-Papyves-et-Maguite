@@ -175,7 +175,6 @@
             font-size: 0.8rem;
         }
 
-        /* Tag grand écran (nom complet) */
         .visit-tag {
             background: var(--primary-light);
             color: #92400e;
@@ -190,7 +189,6 @@
             display: block;
         }
 
-        /* Conteneur pour les points sur mobile */
         .dots-container {
             display: none;
             flex-wrap: wrap;
@@ -199,7 +197,6 @@
             justify-content: center;
         }
 
-        /* Point de couleur pour mobile/tablette */
         .visit-dot-bullet {
             width: 10px;
             height: 10px;
@@ -271,8 +268,10 @@
             padding: 20px;
             border-radius: 16px;
             width: 90%;
-            max-width: 420px;
+            max-width: 440px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -309,11 +308,52 @@
             margin-bottom: 4px;
         }
 
-        input {
+        input[type="text"], input[type="date"], input[type="number"], select {
             padding: 8px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.9rem;
+        }
+
+        /* Section Repas */
+        .meals-section {
+            background-color: var(--bg-color);
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 12px;
+        }
+
+        .meals-title {
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: var(--primary-dark);
+        }
+
+        .meal-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+        }
+
+        .meal-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .meal-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .meal-select {
+            padding: 4px 6px;
+            font-size: 0.8rem;
         }
 
         .modal-actions {
@@ -419,6 +459,32 @@
                 </div>
             </div>
 
+            <!-- NOUVELLE SECTION REPAS -->
+            <div class="meals-section">
+                <div class="meals-title">🍽️ Nous serons là pour :</div>
+                
+                <div class="meal-row">
+                    <label class="meal-checkbox-label">
+                        <input type="checkbox" id="chk-breakfast"> 🥐 Petit-déjeuner
+                    </label>
+                    <select id="sel-breakfast" class="meal-select" disabled></select>
+                </div>
+
+                <div class="meal-row">
+                    <label class="meal-checkbox-label">
+                        <input type="checkbox" id="chk-lunch"> 🥗 Déjeuner
+                    </label>
+                    <select id="sel-lunch" class="meal-select" disabled></select>
+                </div>
+
+                <div class="meal-row">
+                    <label class="meal-checkbox-label">
+                        <input type="checkbox" id="chk-dinner"> 🍲 Dîner
+                    </label>
+                    <select id="sel-dinner" class="meal-select" disabled></select>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label for="visit-comment">Commentaire (facultatif)</label>
                 <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
@@ -436,12 +502,10 @@
         </div>
     </div>
 
-    <!-- CODE SCRIPT AVEC INTEGRATION FIREBASE MODULES -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Configuration Firebase fournie
         const firebaseConfig = {
             apiKey: "AIzaSyDk4ZaEveUEdbpI1zOM64MShbtLmsL_3eU",
             authDomain: "famille-papyves.firebaseapp.com",
@@ -451,7 +515,6 @@
             appId: "1:159741543345:web:4f5dcf0deb6c11ef47b390"
         };
 
-        // Initialisation de Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
@@ -461,7 +524,33 @@
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-        // Écoute en temps réel de la collection "visits"
+        // Remplir les listes déroulantes de 1 à 10 pers.
+        function initMealSelects() {
+            ['sel-breakfast', 'sel-lunch', 'sel-dinner'].forEach(id => {
+                const select = document.getElementById(id);
+                select.innerHTML = '';
+                for (let i = 1; i <= 10; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.innerText = `${i} pers.`;
+                    select.appendChild(opt);
+                }
+            });
+        }
+        initMealSelects();
+
+        // Gestion de l'activation/désactivation des selects
+        function bindMealCheckbox(chkId, selId) {
+            const chk = document.getElementById(chkId);
+            const sel = document.getElementById(selId);
+            chk.addEventListener('change', () => {
+                sel.disabled = !chk.checked;
+            });
+        }
+        bindMealCheckbox('chk-breakfast', 'sel-breakfast');
+        bindMealCheckbox('chk-lunch', 'sel-lunch');
+        bindMealCheckbox('chk-dinner', 'sel-dinner');
+
         onSnapshot(collection(db, "visits"), (snapshot) => {
             visits = [];
             snapshot.forEach((docSnapshot) => {
@@ -491,6 +580,14 @@
             document.getElementById("visit-start").value = "";
             document.getElementById("visit-days").value = "1";
             document.getElementById("visit-comment").value = "";
+
+            // Réinitialiser les repas
+            ['breakfast', 'lunch', 'dinner'].forEach(m => {
+                document.getElementById(`chk-${m}`).checked = false;
+                document.getElementById(`sel-${m}`).disabled = true;
+                document.getElementById(`sel-${m}`).value = "1";
+            });
+
             document.getElementById("btn-delete-visit").classList.add("hidden");
             document.getElementById("visit-modal").classList.add("active");
         }
@@ -505,6 +602,23 @@
             document.getElementById("visit-start").value = visit.start;
             document.getElementById("visit-days").value = visit.days;
             document.getElementById("visit-comment").value = visit.comment || "";
+
+            // Charger les repas
+            ['breakfast', 'lunch', 'dinner'].forEach(m => {
+                const mealData = visit.meals ? visit.meals[m] : null;
+                const chk = document.getElementById(`chk-${m}`);
+                const sel = document.getElementById(`sel-${m}`);
+                if (mealData && mealData.active) {
+                    chk.checked = true;
+                    sel.disabled = false;
+                    sel.value = mealData.count || 1;
+                } else {
+                    chk.checked = false;
+                    sel.disabled = true;
+                    sel.value = 1;
+                }
+            });
+
             document.getElementById("btn-delete-visit").classList.remove("hidden");
             document.getElementById("visit-modal").classList.add("active");
         }
@@ -531,6 +645,15 @@
                 btnGrid.classList.remove("active");
                 btnList.classList.add("active");
             }
+        }
+
+        function formatMealSummary(meals) {
+            if (!meals) return '';
+            const parts = [];
+            if (meals.breakfast?.active) parts.push(`🥐 Petit-déj (${meals.breakfast.count}p)`);
+            if (meals.lunch?.active) parts.push(`🥗 Déjeuner (${meals.lunch.count}p)`);
+            if (meals.dinner?.active) parts.push(`🍲 Dîner (${meals.dinner.count}p)`);
+            return parts.length > 0 ? ' - ' + parts.join(', ') : '';
         }
 
         function renderCalendar() {
@@ -576,7 +699,7 @@
 
                         const tag = document.createElement("div");
                         tag.className = "visit-tag";
-                        tag.title = `${v.name}${v.comment ? ' - ' + v.comment : ''}`;
+                        tag.title = `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
                         tag.innerText = v.name;
                         tag.onclick = (e) => { e.stopPropagation(); openModalForEdit(v.id); };
                         dayDiv.appendChild(tag);
@@ -599,7 +722,7 @@
                             <div class="timeline-content">
                                 ${dayVisits.map(v => `
                                     <span class="timeline-badge" data-id="${v.id}">
-                                        <strong>${v.name}</strong> ${v.comment ? '(' + v.comment + ')' : ''}
+                                        <strong>${v.name}</strong> ${formatMealSummary(v.meals)} ${v.comment ? '(' + v.comment + ')' : ''}
                                     </span>
                                 `).join('')}
                             </div>
@@ -610,7 +733,6 @@
 
             document.getElementById("timeline-container").innerHTML = timelineHtml || "<p style='color:#78716c; font-style:italic;'>Aucune visite enregistrée pour ce mois-ci.</p>";
             
-            // Attacher les clics sur la vue déroulante
             document.querySelectorAll('.timeline-badge').forEach(badge => {
                 badge.addEventListener('click', () => openModalForEdit(badge.dataset.id));
             });
@@ -640,7 +762,23 @@
 
             if (!checkPasscode()) return;
 
-            const visitData = { name, start, days, comment };
+            // Enregistrer l'état des repas
+            const meals = {
+                breakfast: {
+                    active: document.getElementById("chk-breakfast").checked,
+                    count: parseInt(document.getElementById("sel-breakfast").value)
+                },
+                lunch: {
+                    active: document.getElementById("chk-lunch").checked,
+                    count: parseInt(document.getElementById("sel-lunch").value)
+                },
+                dinner: {
+                    active: document.getElementById("chk-dinner").checked,
+                    count: parseInt(document.getElementById("sel-dinner").value)
+                }
+            };
+
+            const visitData = { name, start, days, comment, meals };
 
             if (id) {
                 await updateDoc(doc(db, "visits", id), visitData);
@@ -651,7 +789,6 @@
             closeModal();
         }
 
-        // Configuration des événements des boutons
         document.getElementById("btn-view-grid").onclick = () => setView('grid');
         document.getElementById("btn-view-list").onclick = () => setView('list');
         document.getElementById("btn-open-add-modal").onclick = openModalForAdd;
