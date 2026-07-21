@@ -7,11 +7,14 @@
     <style>
         :root {
             --primary: #d97706;
+            --primary-dark: #b45309;
             --primary-light: #fef3c7;
             --bg-color: #fcfbf9;
             --text-color: #292524;
             --weekend-bg: #f5f5f4;
             --border-color: #e7e5e4;
+            --danger: #ef4444;
+            --danger-dark: #dc2626;
         }
 
         body {
@@ -19,7 +22,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 16px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -52,7 +55,6 @@
             font-size: 1rem;
         }
 
-        /* Onglets de choix de vue */
         .view-toggle {
             display: flex;
             justify-content: center;
@@ -77,21 +79,27 @@
             border-color: var(--primary);
         }
 
-        /* Navigation Mois */
         .calendar-nav {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            gap: 8px;
             margin-bottom: 20px;
             background: var(--bg-color);
-            padding: 12px 20px;
+            padding: 12px 16px;
             border-radius: 12px;
+        }
+
+        .nav-left, .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         button {
             background: white;
             border: 1px solid var(--border-color);
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
@@ -110,35 +118,43 @@
         }
 
         button.primary-btn:hover {
-            background: #b45309;
+            background: var(--primary-dark);
         }
 
-        /* Grille Calendrier */
+        button.danger-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+        }
+
+        button.danger-btn:hover {
+            background: var(--danger-dark);
+        }
+
         .calendar-grid {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 8px;
-            margin-bottom: 30px;
+            gap: 6px;
+            margin-bottom: 20px;
         }
 
         .day-header {
             text-align: center;
             font-weight: bold;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: #78716c;
-            padding: 8px 0;
+            padding: 6px 0;
         }
 
         .calendar-day {
-            min-height: 90px;
+            min-height: 85px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 6px;
             background: white;
             display: flex;
             flex-direction: column;
-            justify-content: flex-start;
-            position: relative;
+            gap: 4px;
         }
 
         .calendar-day.weekend {
@@ -151,48 +167,119 @@
 
         .day-number {
             font-weight: bold;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
+            font-size: 0.85rem;
         }
 
         .visit-tag {
             background: var(--primary-light);
             color: #92400e;
             font-size: 0.75rem;
-            padding: 2px 6px;
+            padding: 4px 6px;
             border-radius: 4px;
-            margin-bottom: 2px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            border-left: 3px solid var(--primary);
+            cursor: pointer;
+            transition: transform 0.1s ease, filter 0.1s ease;
+        }
+
+        .visit-tag:hover {
+            transform: translateY(-1px);
+            filter: brightness(0.95);
+        }
+
+        .timeline-item {
+            display: flex;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .timeline-date {
+            width: 140px;
+            font-weight: bold;
+            color: #78716c;
+        }
+
+        .timeline-content {
+            flex-grow: 1;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .timeline-badge {
+            background: var(--primary-light);
+            color: #92400e;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
             cursor: pointer;
             border-left: 3px solid var(--primary);
         }
 
-        /* Formulaire */
-        .action-section {
-            background: var(--bg-color);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px dashed var(--border-color);
-            margin-top: 20px;
+        .timeline-badge:hover {
+            filter: brightness(0.95);
         }
 
-        .action-section h3 {
-            margin-top: 0;
+        /* Style de la boîte modale */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: white;
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
             color: var(--primary);
         }
 
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            margin-bottom: 12px;
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: #78716c;
+            padding: 0;
         }
 
         .form-group {
             display: flex;
             flex-direction: column;
+            margin-bottom: 12px;
         }
 
         label {
@@ -208,31 +295,34 @@
             font-size: 0.9rem;
         }
 
-        /* Vue déroulante */
-        .timeline-view {
-            margin-top: 10px;
-        }
-
-        .timeline-item {
+        .modal-actions {
             display: flex;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
+            justify-content: space-between;
             align-items: center;
+            margin-top: 20px;
         }
 
-        .timeline-date {
-            width: 140px;
-            font-weight: bold;
-            color: #78716c;
+        .modal-actions-right {
+            display: flex;
+            gap: 8px;
         }
 
-        .timeline-content {
-            flex-grow: 1;
-        }
-
-        /* Utilitaire pour masquer un élément */
         .hidden {
             display: none !important;
+        }
+
+        @media (max-width: 600px) {
+            .calendar-day {
+                min-height: 60px;
+                padding: 4px;
+            }
+            .visit-tag {
+                font-size: 0.65rem;
+            }
+            .calendar-nav {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
         }
     </style>
 </head>
@@ -244,20 +334,27 @@
             <p class="subtitle">Le calendrier de la famille, simple et chaleureux</p>
         </header>
 
-        <!-- Sélecteur de vue -->
         <div class="view-toggle">
             <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
             <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
         </div>
 
-        <!-- Navigation Mois -->
         <div class="calendar-nav">
-            <button onclick="changeMonth(-1)">Mois précédent</button>
-            <h2 id="current-month-label" style="margin: 0; font-size: 1.2rem;"></h2>
-            <button onclick="changeMonth(1)">Mois suivant</button>
+            <div class="nav-left">
+                <button onclick="changeMonth(-1)">‹ Précédent</button>
+                <button onclick="changeMonth(1)">Suivant ›</button>
+            </div>
+            
+            <div style="text-align: center;">
+                <h2 id="current-month-label" style="margin: 0; font-size: 1.1rem;"></h2>
+                <button onclick="goToToday()" style="font-size: 0.75rem; margin-top: 4px; padding: 2px 8px;">Aujourd'hui</button>
+            </div>
+
+            <div class="nav-right">
+                <button class="primary-btn" onclick="openModalForAdd()">➕ Ajouter</button>
+            </div>
         </div>
 
-        <!-- Vue Grille Calendrier -->
         <div id="grid-view-container">
             <div class="calendar-grid">
                 <div class="day-header">Lun</div>
@@ -271,53 +368,105 @@
             <div class="calendar-grid" id="calendar-days"></div>
         </div>
 
-        <!-- Vue Déroulante (Liste) -->
         <div id="list-view-container" class="timeline-view hidden">
             <div id="timeline-container"></div>
         </div>
+    </div>
 
-        <!-- Formulaire d'ajout -->
-        <div class="action-section">
-            <h3>➕ Ajouter une présence</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="visitor-name">Nom / Prénom</label>
-                    <input type="text" id="visitor-name" placeholder="Ex: Thomas & Julie">
-                </div>
-                <div class="form-group">
+    <!-- Boîte Modale (Ajout / Édition / Suppression) -->
+    <div id="visit-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title">➕ Ajouter une présence</h3>
+                <button class="close-modal" onclick="closeModal()">✕</button>
+            </div>
+            
+            <input type="hidden" id="visit-id">
+
+            <div class="form-group">
+                <label for="visitor-name">Nom / Prénom</label>
+                <input type="text" id="visitor-name" placeholder="Ex: Thomas & Julie">
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 2;">
                     <label for="visit-start">Date de début</label>
                     <input type="date" id="visit-start">
                 </div>
-                <div class="form-group">
-                    <label for="visit-days">Nombre de jours</label>
+                <div class="form-group" style="flex: 1;">
+                    <label for="visit-days">Jours</label>
                     <input type="number" id="visit-days" value="1" min="1">
                 </div>
             </div>
-            <div class="form-row">
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label for="visit-comment">Commentaire (facultatif)</label>
-                    <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
+
+            <div class="form-group">
+                <label for="visit-comment">Commentaire (facultatif)</label>
+                <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
+            </div>
+
+            <div class="modal-actions">
+                <div>
+                    <button id="btn-delete-visit" class="danger-btn hidden" onclick="saveOrDeleteVisit(true)">🗑️ Supprimer</button>
+                </div>
+                <div class="modal-actions-right">
+                    <button onclick="closeModal()">Annuler</button>
+                    <button class="primary-btn" onclick="saveOrDeleteVisit(false)">Enregistrer</button>
                 </div>
             </div>
-            <button class="primary-btn" onclick="addVisit()">Enregistrer la visite</button>
         </div>
     </div>
 
     <script>
         let currentDate = new Date();
-        let currentView = 'grid'; // 'grid' ou 'list'
-        
-        let defaultVisits = [
-            { name: "Lucas", start: "2026-07-25", days: 3, comment: "Vacances d'été" },
-            { name: "Sophie & Marc", start: "2026-07-28", days: 2, comment: "Passe un coucou" }
-        ];
-        let visits = JSON.parse(localStorage.getItem('family_visits')) || defaultVisits;
+        let currentView = 'grid';
+
+        let visits = JSON.parse(localStorage.getItem('family_visits')) || [];
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
         function parseLocalDate(dateStr) {
             const [year, month, day] = dateStr.split('-').map(Number);
             return new Date(year, month - 1, day);
+        }
+
+        function checkPasscode() {
+            const code = prompt("Entrez le code secret :");
+            if (!code || code.trim().toUpperCase() !== "DENIS") {
+                alert("Code incorrect. Action annulée.");
+                return false;
+            }
+            return true;
+        }
+
+        function openModalForAdd() {
+            document.getElementById("modal-title").innerText = "➕ Ajouter une présence";
+            document.getElementById("visit-id").value = "";
+            document.getElementById("visitor-name").value = "";
+            document.getElementById("visit-start").value = "";
+            document.getElementById("visit-days").value = "1";
+            document.getElementById("visit-comment").value = "";
+            document.getElementById("btn-delete-visit").classList.add("hidden");
+
+            document.getElementById("visit-modal").classList.add("active");
+        }
+
+        function openModalForEdit(id) {
+            const visit = visits.find(v => v.id === id);
+            if (!visit) return;
+
+            document.getElementById("modal-title").innerText = "✏️ Modifier la visite";
+            document.getElementById("visit-id").value = visit.id;
+            document.getElementById("visitor-name").value = visit.name;
+            document.getElementById("visit-start").value = visit.start;
+            document.getElementById("visit-days").value = visit.days;
+            document.getElementById("visit-comment").value = visit.comment || "";
+            document.getElementById("btn-delete-visit").classList.remove("hidden");
+
+            document.getElementById("visit-modal").classList.add("active");
+        }
+
+        function closeModal() {
+            document.getElementById("visit-modal").classList.remove("active");
         }
 
         function setView(view) {
@@ -345,6 +494,11 @@
             renderCalendar();
         }
 
+        function goToToday() {
+            currentDate = new Date();
+            renderCalendar();
+        }
+
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
@@ -358,7 +512,6 @@
             const totalDays = new Date(year, month + 1, 0).getDate();
             const prevTotalDays = new Date(year, month, 0).getDate();
 
-            // Jours du mois précédent
             for (let i = firstDayIndex; i > 0; i--) {
                 const dayDiv = document.createElement("div");
                 dayDiv.className = "calendar-day other-month";
@@ -366,7 +519,6 @@
                 daysContainer.appendChild(dayDiv);
             }
 
-            // Jours du mois en cours
             let timelineHtml = "";
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement("div");
@@ -386,8 +538,12 @@
                         dayVisits.push(v);
                         const tag = document.createElement("div");
                         tag.className = "visit-tag";
-                        tag.title = `${v.name}${v.comment ? ' - ' + v.comment : ''}`;
+                        tag.title = `${v.name}${v.comment ? ' - ' + v.comment : ''} (Cliquer pour modifier)`;
                         tag.innerText = v.name;
+                        tag.onclick = (e) => {
+                            e.stopPropagation();
+                            openModalForEdit(v.id);
+                        };
                         dayDiv.appendChild(tag);
                     }
                 });
@@ -399,7 +555,11 @@
                         <div class="timeline-item">
                             <div class="timeline-date">${day} ${monthNames[month]}</div>
                             <div class="timeline-content">
-                                ${dayVisits.map(v => `<strong>${v.name}</strong> ${v.comment ? '(' + v.comment + ')' : ''}`).join(', ')}
+                                ${dayVisits.map(v => `
+                                    <span class="timeline-badge" onclick="openModalForEdit(${v.id})" title="Cliquer pour modifier">
+                                        <strong>${v.name}</strong> ${v.comment ? '(' + v.comment + ')' : ''}
+                                    </span>
+                                `).join('')}
                             </div>
                         </div>
                     `;
@@ -409,7 +569,20 @@
             document.getElementById("timeline-container").innerHTML = timelineHtml || "<p style='color:#78716c; font-style:italic;'>Aucune visite enregistrée pour ce mois-ci.</p>";
         }
 
-        function addVisit() {
+        function saveOrDeleteVisit(isDelete = false) {
+            const id = document.getElementById("visit-id").value;
+
+            if (isDelete) {
+                if (confirm("Voulez-vous vraiment supprimer cette visite ?")) {
+                    if (!checkPasscode()) return;
+                    visits = visits.filter(v => v.id != id);
+                    localStorage.setItem('family_visits', JSON.stringify(visits));
+                    closeModal();
+                    renderCalendar();
+                }
+                return;
+            }
+
             const name = document.getElementById("visitor-name").value.trim();
             const start = document.getElementById("visit-start").value;
             const days = parseInt(document.getElementById("visit-days").value);
@@ -420,22 +593,28 @@
                 return;
             }
 
-            const code = prompt("Veuillez entrer le code secret de modification :");
-            if (code !== "DENIS") {
-                alert("Code incorrect. Modification annulée.");
-                return;
+            if (!checkPasscode()) return;
+
+            if (id) {
+                // Modification d'une visite existante
+                const index = visits.findIndex(v => v.id == id);
+                if (index !== -1) {
+                    visits[index] = { id: Number(id), name, start, days, comment };
+                }
+            } else {
+                // Création d'une nouvelle visite
+                visits.push({
+                    id: Date.now(),
+                    name,
+                    start,
+                    days,
+                    comment
+                });
             }
 
-            visits.push({ name, start, days, comment });
             localStorage.setItem('family_visits', JSON.stringify(visits));
-
-            document.getElementById("visitor-name").value = "";
-            document.getElementById("visit-start").value = "";
-            document.getElementById("visit-days").value = "1";
-            document.getElementById("visit-comment").value = "";
-
+            closeModal();
             renderCalendar();
-            alert("Visite ajoutée avec succès !");
         }
 
         renderCalendar();
