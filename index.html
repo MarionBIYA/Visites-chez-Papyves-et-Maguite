@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Visites chez Papyves & Maguite</title>
+
     <style>
         :root {
             --primary: #d97706;
@@ -55,7 +56,6 @@
             font-size: 0.95rem;
         }
 
-        /* Barre supérieure : Onglets de vue + Bouton d'ajout */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -175,7 +175,7 @@
             font-size: 0.8rem;
         }
 
-        /* Modèle de tag pour grande écran */
+        /* Tag grand écran (nom complet) */
         .visit-tag {
             background: var(--primary-light);
             color: #92400e;
@@ -187,29 +187,30 @@
             text-overflow: ellipsis;
             border-left: 3px solid var(--primary);
             cursor: pointer;
-            transition: transform 0.1s ease, filter 0.1s ease;
             display: block;
         }
 
-        .visit-tag:hover {
-            transform: translateY(-1px);
-            filter: brightness(0.95);
+        /* Conteneur pour les points sur mobile */
+        .dots-container {
+            display: none;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 2px;
+            justify-content: center;
         }
 
-        /* Puce miniature pour mobile/tablette */
-        .visit-dot {
-            display: none;
-            background: var(--primary);
-            color: white;
-            font-size: 0.65rem;
-            padding: 2px 4px;
-            border-radius: 4px;
-            text-align: center;
+        /* Point de couleur pour mobile/tablette */
+        .visit-dot-bullet {
+            width: 10px;
+            height: 10px;
+            background-color: var(--primary);
+            border-radius: 50%;
             cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            font-weight: bold;
+            transition: transform 0.1s ease;
+        }
+
+        .visit-dot-bullet:active {
+            transform: scale(1.3);
         }
 
         .timeline-item {
@@ -244,7 +245,6 @@
             border-left: 3px solid var(--primary);
         }
 
-        /* Style de la boîte modale */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -332,62 +332,21 @@
             display: none !important;
         }
 
-        /* OPTIMISATIONS MOBILE ET TABLETTE */
         @media (max-width: 768px) {
-            body {
-                padding: 6px;
-            }
-
-            .container {
-                padding: 12px;
-                border-radius: 12px;
-            }
-
-            h1 {
-                font-size: 1.3rem;
-            }
-
-            .top-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .view-toggle {
-                justify-content: center;
-            }
-
-            .top-bar .primary-btn {
-                width: 100%;
-                text-align: center;
-            }
-
-            .calendar-day {
-                min-height: 52px;
-                padding: 3px;
-            }
-
-            .day-number {
-                font-size: 0.75rem;
-            }
-
-            /* Sur mobile / tablette : on masque le grand tag et on affiche l'indicateur compact */
-            .visit-tag {
-                display: none;
-            }
-
-            .visit-dot {
-                display: block;
-            }
-
-            .timeline-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 6px;
-            }
-
-            .timeline-date {
-                width: auto;
-            }
+            body { padding: 6px; }
+            .container { padding: 12px; border-radius: 12px; }
+            h1 { font-size: 1.3rem; }
+            .top-bar { flex-direction: column; align-items: stretch; }
+            .view-toggle { justify-content: center; }
+            .top-bar .primary-btn { width: 100%; text-align: center; }
+            .calendar-day { min-height: 52px; padding: 3px; }
+            .day-number { font-size: 0.75rem; text-align: center; }
+            
+            .visit-tag { display: none; }
+            .dots-container { display: flex; }
+            
+            .timeline-item { flex-direction: column; align-items: flex-start; gap: 6px; }
+            .timeline-date { width: auto; }
         }
     </style>
 </head>
@@ -399,24 +358,21 @@
             <p class="subtitle">Le calendrier de la famille, simple et chaleureux</p>
         </header>
 
-        <!-- Barre supérieure alignée -->
         <div class="top-bar">
             <div class="view-toggle">
-                <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
-                <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
+                <button id="btn-view-grid" class="toggle-btn active">📅 Grille Mois</button>
+                <button id="btn-view-list" class="toggle-btn">📋 Vue Déroulante</button>
             </div>
-            <button class="primary-btn" onclick="openModalForAdd()">➕ Ajouter une visite</button>
+            <button id="btn-open-add-modal" class="primary-btn">➕ Ajouter une visite</button>
         </div>
 
         <div class="calendar-nav">
-            <button onclick="changeMonth(-1)">‹ Précédent</button>
-            
+            <button id="btn-prev-month">‹ Précédent</button>
             <div style="text-align: center;">
                 <h2 id="current-month-label" style="margin: 0; font-size: 1rem;"></h2>
-                <button onclick="goToToday()" style="font-size: 0.7rem; margin-top: 2px; padding: 2px 6px;">Aujourd'hui</button>
+                <button id="btn-go-today" style="font-size: 0.7rem; margin-top: 2px; padding: 2px 6px;">Aujourd'hui</button>
             </div>
-
-            <button onclick="changeMonth(1)">Suivant ›</button>
+            <button id="btn-next-month">Suivant ›</button>
         </div>
 
         <div id="grid-view-container">
@@ -437,12 +393,12 @@
         </div>
     </div>
 
-    <!-- Boîte Modale -->
+    <!-- Modale -->
     <div id="visit-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
                 <h3 id="modal-title">➕ Ajouter une visite</h3>
-                <button class="close-modal" onclick="closeModal()">✕</button>
+                <button id="btn-close-modal" class="close-modal">✕</button>
             </div>
             
             <input type="hidden" id="visit-id">
@@ -470,23 +426,49 @@
 
             <div class="modal-actions">
                 <div>
-                    <button id="btn-delete-visit" class="danger-btn hidden" onclick="saveOrDeleteVisit(true)">🗑️ Supprimer</button>
+                    <button id="btn-delete-visit" class="danger-btn hidden">🗑️ Supprimer</button>
                 </div>
                 <div class="modal-actions-right">
-                    <button onclick="closeModal()">Annuler</button>
-                    <button class="primary-btn" onclick="saveOrDeleteVisit(false)">Enregistrer</button>
+                    <button id="btn-cancel-modal">Annuler</button>
+                    <button id="btn-save-visit" class="primary-btn">Enregistrer</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
+    <!-- CODE SCRIPT AVEC INTEGRATION FIREBASE MODULES -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Configuration Firebase fournie
+        const firebaseConfig = {
+            apiKey: "AIzaSyDk4ZaEveUEdbpI1zOM64MShbtLmsL_3eU",
+            authDomain: "famille-papyves.firebaseapp.com",
+            projectId: "famille-papyves",
+            storageBucket: "famille-papyves.firebasestorage.app",
+            messagingSenderId: "159741543345",
+            appId: "1:159741543345:web:4f5dcf0deb6c11ef47b390"
+        };
+
+        // Initialisation de Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
         let currentDate = new Date();
         let currentView = 'grid';
-
-        let visits = JSON.parse(localStorage.getItem('family_visits')) || [];
+        let visits = [];
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+        // Écoute en temps réel de la collection "visits"
+        onSnapshot(collection(db, "visits"), (snapshot) => {
+            visits = [];
+            snapshot.forEach((docSnapshot) => {
+                visits.push({ id: docSnapshot.id, ...docSnapshot.data() });
+            });
+            renderCalendar();
+        });
 
         function parseLocalDate(dateStr) {
             const [year, month, day] = dateStr.split('-').map(Number);
@@ -510,7 +492,6 @@
             document.getElementById("visit-days").value = "1";
             document.getElementById("visit-comment").value = "";
             document.getElementById("btn-delete-visit").classList.add("hidden");
-
             document.getElementById("visit-modal").classList.add("active");
         }
 
@@ -525,7 +506,6 @@
             document.getElementById("visit-days").value = visit.days;
             document.getElementById("visit-comment").value = visit.comment || "";
             document.getElementById("btn-delete-visit").classList.remove("hidden");
-
             document.getElementById("visit-modal").classList.add("active");
         }
 
@@ -551,16 +531,6 @@
                 btnGrid.classList.remove("active");
                 btnList.classList.add("active");
             }
-        }
-
-        function changeMonth(direction) {
-            currentDate.setMonth(currentDate.getMonth() + direction);
-            renderCalendar();
-        }
-
-        function goToToday() {
-            currentDate = new Date();
-            renderCalendar();
         }
 
         function renderCalendar() {
@@ -592,6 +562,9 @@
                 dayDiv.className = `calendar-day ${isWeekend ? 'weekend' : ''}`;
                 dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
 
+                const dotsContainer = document.createElement("div");
+                dotsContainer.className = "dots-container";
+
                 let dayVisits = [];
                 visits.forEach(v => {
                     let startDate = parseLocalDate(v.start);
@@ -601,30 +574,22 @@
                     if (currentDay >= startDate && currentDay <= endDate) {
                         dayVisits.push(v);
 
-                        // Tag grand écran (nom complet)
                         const tag = document.createElement("div");
                         tag.className = "visit-tag";
-                        tag.title = `${v.name}${v.comment ? ' - ' + v.comment : ''} (Cliquer pour modifier)`;
+                        tag.title = `${v.name}${v.comment ? ' - ' + v.comment : ''}`;
                         tag.innerText = v.name;
-                        tag.onclick = (e) => {
-                            e.stopPropagation();
-                            openModalForEdit(v.id);
-                        };
+                        tag.onclick = (e) => { e.stopPropagation(); openModalForEdit(v.id); };
                         dayDiv.appendChild(tag);
 
-                        // Puce miniature mobile/tablette (icône + court)
                         const dot = document.createElement("div");
-                        dot.className = "visit-dot";
+                        dot.className = "visit-dot-bullet";
                         dot.title = `${v.name} (Cliquer pour voir/modifier)`;
-                        dot.innerText = `👤 ${v.name}`;
-                        dot.onclick = (e) => {
-                            e.stopPropagation();
-                            openModalForEdit(v.id);
-                        };
-                        dayDiv.appendChild(dot);
+                        dot.onclick = (e) => { e.stopPropagation(); openModalForEdit(v.id); };
+                        dotsContainer.appendChild(dot);
                     }
                 });
 
+                dayDiv.appendChild(dotsContainer);
                 daysContainer.appendChild(dayDiv);
 
                 if (dayVisits.length > 0) {
@@ -633,7 +598,7 @@
                             <div class="timeline-date">${day} ${monthNames[month]}</div>
                             <div class="timeline-content">
                                 ${dayVisits.map(v => `
-                                    <span class="timeline-badge" onclick="openModalForEdit(${v.id})" title="Cliquer pour modifier">
+                                    <span class="timeline-badge" data-id="${v.id}">
                                         <strong>${v.name}</strong> ${v.comment ? '(' + v.comment + ')' : ''}
                                     </span>
                                 `).join('')}
@@ -644,18 +609,21 @@
             }
 
             document.getElementById("timeline-container").innerHTML = timelineHtml || "<p style='color:#78716c; font-style:italic;'>Aucune visite enregistrée pour ce mois-ci.</p>";
+            
+            // Attacher les clics sur la vue déroulante
+            document.querySelectorAll('.timeline-badge').forEach(badge => {
+                badge.addEventListener('click', () => openModalForEdit(badge.dataset.id));
+            });
         }
 
-        function saveOrDeleteVisit(isDelete = false) {
+        async function saveOrDeleteVisit(isDelete = false) {
             const id = document.getElementById("visit-id").value;
 
             if (isDelete) {
                 if (confirm("Voulez-vous vraiment supprimer cette visite ?")) {
                     if (!checkPasscode()) return;
-                    visits = visits.filter(v => v.id != id);
-                    localStorage.setItem('family_visits', JSON.stringify(visits));
+                    await deleteDoc(doc(db, "visits", id));
                     closeModal();
-                    renderCalendar();
                 }
                 return;
             }
@@ -672,25 +640,40 @@
 
             if (!checkPasscode()) return;
 
+            const visitData = { name, start, days, comment };
+
             if (id) {
-                const index = visits.findIndex(v => v.id == id);
-                if (index !== -1) {
-                    visits[index] = { id: Number(id), name, start, days, comment };
-                }
+                await updateDoc(doc(db, "visits", id), visitData);
             } else {
-                visits.push({
-                    id: Date.now(),
-                    name,
-                    start,
-                    days,
-                    comment
-                });
+                await addDoc(collection(db, "visits"), visitData);
             }
 
-            localStorage.setItem('family_visits', JSON.stringify(visits));
             closeModal();
-            renderCalendar();
         }
+
+        // Configuration des événements des boutons
+        document.getElementById("btn-view-grid").onclick = () => setView('grid');
+        document.getElementById("btn-view-list").onclick = () => setView('list');
+        document.getElementById("btn-open-add-modal").onclick = openModalForAdd;
+        document.getElementById("btn-close-modal").onclick = closeModal;
+        document.getElementById("btn-cancel-modal").onclick = closeModal;
+        document.getElementById("btn-save-visit").onclick = () => saveOrDeleteVisit(false);
+        document.getElementById("btn-delete-visit").onclick = () => saveOrDeleteVisit(true);
+
+        document.getElementById("btn-prev-month").onclick = () => {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            renderCalendar();
+        };
+
+        document.getElementById("btn-next-month").onclick = () => {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            renderCalendar();
+        };
+
+        document.getElementById("btn-go-today").onclick = () => {
+            currentDate = new Date();
+            renderCalendar();
+        };
 
         renderCalendar();
     </script>
