@@ -247,10 +247,11 @@
         }
 
         .timeline-date {
-            width: 120px;
+            width: 180px;
             font-weight: bold;
             color: #78716c;
             font-size: 0.9rem;
+            flex-shrink: 0;
         }
 
         .timeline-content {
@@ -475,7 +476,7 @@
             <button id="btn-open-add-modal" class="primary-btn">➕ Ajouter un événement</button>
         </div>
 
-        <div class="calendar-nav">
+        <div class="calendar-nav" id="calendar-nav-bar">
             <button id="btn-prev-month">‹ Précédent</button>
             <div style="text-align: center;">
                 <h2 id="current-month-label" style="margin: 0; font-size: 1rem;"></h2>
@@ -734,7 +735,6 @@
             document.getElementById("modal-title").innerText = isAbsence ? "Détails de l'absence" : "📋 Détails de la visite";
             document.getElementById("visit-id").value = visit.id;
 
-            // Définition explicite du titre de la section récapitulative
             document.getElementById("recap-type-label").innerText = isAbsence ? "Absence de Papyves et Maguite" : "Visiteur(s)";
             
             const recapName = document.getElementById("recap-name");
@@ -845,17 +845,20 @@
             currentView = view;
             const gridContainer = document.getElementById("grid-view-container");
             const listContainer = document.getElementById("list-view-container");
+            const navBar = document.getElementById("calendar-nav-bar");
             const btnGrid = document.getElementById("btn-view-grid");
             const btnList = document.getElementById("btn-view-list");
 
             if (view === 'grid') {
                 gridContainer.classList.remove("hidden");
                 listContainer.classList.add("hidden");
+                navBar.classList.remove("hidden");
                 btnGrid.classList.add("active");
                 btnList.classList.remove("active");
             } else {
                 gridContainer.classList.add("hidden");
                 listContainer.classList.remove("hidden");
+                navBar.classList.add("hidden"); // On masque les flèches du mois en vue liste
                 btnGrid.classList.remove("active");
                 btnList.classList.add("active");
             }
@@ -876,6 +879,7 @@
 
             document.getElementById("current-month-label").innerText = `${monthNames[month]} ${year}`;
 
+            // --- 1. RENDU DE LA GRILLE DU MOIS EN COURS ---
             const daysContainer = document.getElementById("calendar-days");
             daysContainer.innerHTML = "";
 
@@ -890,7 +894,6 @@
                 daysContainer.appendChild(dayDiv);
             }
 
-            let timelineHtml = "";
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement("div");
                 const currentDay = new Date(year, month, day);
@@ -937,29 +940,58 @@
 
                 dayDiv.appendChild(dotsContainer);
                 daysContainer.appendChild(dayDiv);
+            }
 
-                if (dayVisits.length > 0) {
+            // --- 2. RENDU DE LA VUE DÉROULANTE (ÉVÉNEMENTS À VENIR UNIQUEMENT) ---
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Filtrer les événements pour ne garder que ceux qui ne sont pas finis
+            const upcomingVisits = visits.filter(v => {
+                const startDate = parseLocalDate(v.start);
+                const endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + v.days - 1);
+                return endDate >= today;
+            });
+
+            // Trier chronologiquement du plus proche au plus éloigné
+            upcomingVisits.sort((a, b) => parseLocalDate(a.start) - parseLocalDate(b.start));
+
+            let timelineHtml = "";
+
+            if (upcomingVisits.length === 0) {
+                timelineHtml = "<p style='color:#78716c; font-style:italic; text-align:center; padding: 20px 0;'>Aucun événement à venir.</p>";
+            } else {
+                upcomingVisits.forEach(v => {
+                    const isAbsence = v.type === "absence";
+                    const startDate = parseLocalDate(v.start);
+                    const endDate = new Date(startDate);
+                    endDate.setDate(startDate.getDate() + v.days - 1);
+
+                    const optionsDate = { day: 'numeric', month: 'short' };
+                    let dateText = "";
+                    if (v.days === 1) {
+                        dateText = startDate.toLocaleDateString('fr-FR', optionsDate);
+                    } else {
+                        dateText = `${startDate.toLocaleDateString('fr-FR', optionsDate)} - ${endDate.toLocaleDateString('fr-FR', optionsDate)}`;
+                    }
+
                     timelineHtml += `
                         <div class="timeline-item">
-                            <div class="timeline-date">${day} ${monthNames[month]}</div>
+                            <div class="timeline-date">🗓️ ${dateText}</div>
                             <div class="timeline-content">
-                                ${dayVisits.map(v => {
-                                    const isAbsence = v.type === "absence";
-                                    return `
-                                        <span class="timeline-badge ${isAbsence ? 'absence' : ''}" data-id="${v.id}">
-                                            <strong>${isAbsence ? 'Absence: ' + v.name : v.name}</strong> 
-                                            ${!isAbsence ? formatMealSummary(v.meals) : ''} 
-                                            ${v.comment && !isAbsence ? '(' + v.comment + ')' : ''}
-                                        </span>
-                                    `;
-                                }).join('')}
+                                <span class="timeline-badge ${isAbsence ? 'absence' : ''}" data-id="${v.id}">
+                                    <strong>${isAbsence ? 'Absence: ' + v.name : v.name}</strong> 
+                                    ${!isAbsence ? formatMealSummary(v.meals) : ''} 
+                                    ${v.comment && !isAbsence ? '(' + v.comment + ')' : ''}
+                                </span>
                             </div>
                         </div>
                     `;
-                }
+                });
             }
 
-            document.getElementById("timeline-container").innerHTML = timelineHtml || "<p style='color:#78716c; font-style:italic;'>Aucun événement enregistré pour ce mois-ci.</p>";
+            document.getElementById("timeline-container").innerHTML = timelineHtml;
             
             document.querySelectorAll('.timeline-badge').forEach(badge => {
                 badge.addEventListener('click', () => openModalForView(badge.dataset.id));
