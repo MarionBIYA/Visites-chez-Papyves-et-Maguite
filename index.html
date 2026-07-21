@@ -925,8 +925,8 @@
                     const tag = document.createElement("div");
                     if (isAbsence) {
                         tag.className = "absence-text";
-                        tag.title = `Absence: ${v.name}`;
-                        tag.innerText = `Absence: ${v.name}`;
+                        tag.title = v.name;
+                        tag.innerText = v.name;
                     } else {
                         tag.className = "visit-tag";
                         tag.title = `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
