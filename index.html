@@ -32,6 +32,7 @@
             padding: 24px;
             border-radius: 16px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            box-sizing: border-box;
         }
 
         header {
@@ -49,6 +50,31 @@
             margin: 0;
             color: #78716c;
             font-size: 1rem;
+        }
+
+        /* Onglets de choix de vue */
+        .view-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .toggle-btn {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #78716c;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
         }
 
         /* Navigation Mois */
@@ -143,7 +169,7 @@
             border-left: 3px solid var(--primary);
         }
 
-        /* Section Ajout / Formulaire */
+        /* Formulaire */
         .action-section {
             background: var(--bg-color);
             padding: 20px;
@@ -175,35 +201,38 @@
             margin-bottom: 4px;
         }
 
-        input, textarea {
+        input {
             padding: 8px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 0.9rem;
         }
 
-        /* Liste déroulante jour par jour */
+        /* Vue déroulante */
         .timeline-view {
-            margin-top: 30px;
-            border-top: 1px solid var(--border-color);
-            padding-top: 20px;
+            margin-top: 10px;
         }
 
         .timeline-item {
             display: flex;
-            padding: 10px 0;
+            padding: 12px 0;
             border-bottom: 1px solid var(--border-color);
             align-items: center;
         }
 
         .timeline-date {
-            width: 120px;
+            width: 140px;
             font-weight: bold;
             color: #78716c;
         }
 
         .timeline-content {
             flex-grow: 1;
+        }
+
+        /* Utilitaire pour masquer un élément */
+        .hidden {
+            display: none !important;
         }
     </style>
 </head>
@@ -215,6 +244,12 @@
             <p class="subtitle">Le calendrier de la famille, simple et chaleureux</p>
         </header>
 
+        <!-- Sélecteur de vue -->
+        <div class="view-toggle">
+            <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
+            <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
+        </div>
+
         <!-- Navigation Mois -->
         <div class="calendar-nav">
             <button onclick="changeMonth(-1)">Mois précédent</button>
@@ -222,65 +257,87 @@
             <button onclick="changeMonth(1)">Mois suivant</button>
         </div>
 
-        <!-- Grille du Calendrier -->
-        <div class="calendar-grid" id="calendar-header">
-            <div class="day-header">Lun</div>
-            <div class="day-header">Mar</div>
-            <div class="day-header">Mer</div>
-            <div class="day-header">Jeu</div>
-            <div class="day-header">Ven</div>
-            <div class="day-header" style="color:var(--primary);">Sam</div>
-            <div class="day-header" style="color:var(--primary);">Dim</div>
+        <!-- Vue Grille Calendrier -->
+        <div id="grid-view-container">
+            <div class="calendar-grid">
+                <div class="day-header">Lun</div>
+                <div class="day-header">Mar</div>
+                <div class="day-header">Mer</div>
+                <div class="day-header">Jeu</div>
+                <div class="day-header">Ven</div>
+                <div class="day-header" style="color:var(--primary);">Sam</div>
+                <div class="day-header" style="color:var(--primary);">Dim</div>
+            </div>
+            <div class="calendar-grid" id="calendar-days"></div>
         </div>
-        <div class="calendar-grid" id="calendar-days"></div>
 
-        <!-- Formulaire d'ajout protégé -->
+        <!-- Vue Déroulante (Liste) -->
+        <div id="list-view-container" class="timeline-view hidden">
+            <div id="timeline-container"></div>
+        </div>
+
+        <!-- Formulaire d'ajout -->
         <div class="action-section">
             <h3>➕ Ajouter une présence</h3>
             <div class="form-row">
                 <div class="form-group">
-                    <label>Nom / Prénom</label>
+                    <label for="visitor-name">Nom / Prénom</label>
                     <input type="text" id="visitor-name" placeholder="Ex: Thomas & Julie">
                 </div>
                 <div class="form-group">
-                    <label>Date de début</label>
+                    <label for="visit-start">Date de début</label>
                     <input type="date" id="visit-start">
                 </div>
                 <div class="form-group">
-                    <label>Nombre de jours</label>
+                    <label for="visit-days">Nombre de jours</label>
                     <input type="number" id="visit-days" value="1" min="1">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group" style="grid-column: 1 / -1;">
-                    <label>Commentaire (facultatif)</label>
+                    <label for="visit-comment">Commentaire (facultatif)</label>
                     <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
                 </div>
             </div>
             <button class="primary-btn" onclick="addVisit()">Enregistrer la visite</button>
         </div>
-
-        <!-- Vue déroulante jour par jour -->
-        <div class="timeline-view">
-            <h3>📅 Vue déroulante du mois</h3>
-            <div id="timeline-container"></div>
-        </div>
     </div>
 
     <script>
-        // État de l'application
         let currentDate = new Date();
+        let currentView = 'grid'; // 'grid' ou 'list'
         
-        // Données d'exemple (séjours gérés avec date de début et durée)
-        let visits = [
+        let defaultVisits = [
             { name: "Lucas", start: "2026-07-25", days: 3, comment: "Vacances d'été" },
             { name: "Sophie & Marc", start: "2026-07-28", days: 2, comment: "Passe un coucou" }
         ];
+        let visits = JSON.parse(localStorage.getItem('family_visits')) || defaultVisits;
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-        function initCalendar() {
-            renderCalendar();
+        function parseLocalDate(dateStr) {
+            const [year, month, day] = dateStr.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+
+        function setView(view) {
+            currentView = view;
+            const gridContainer = document.getElementById("grid-view-container");
+            const listContainer = document.getElementById("list-view-container");
+            const btnGrid = document.getElementById("btn-view-grid");
+            const btnList = document.getElementById("btn-view-list");
+
+            if (view === 'grid') {
+                gridContainer.classList.remove("hidden");
+                listContainer.classList.add("hidden");
+                btnGrid.classList.add("active");
+                btnList.classList.remove("active");
+            } else {
+                gridContainer.classList.add("hidden");
+                listContainer.classList.remove("hidden");
+                btnGrid.classList.remove("active");
+                btnList.classList.add("active");
+            }
         }
 
         function changeMonth(direction) {
@@ -292,18 +349,16 @@
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
 
-            // Titre du mois
             document.getElementById("current-month-label").innerText = `${monthNames[month]} ${year}`;
 
             const daysContainer = document.getElementById("calendar-days");
             daysContainer.innerHTML = "";
 
-            // Premier jour du mois et nombre de jours
-            const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; // Lundi = 0
+            const firstDayIndex = (new Date(year, month, 1).getDay() + 6) % 7; 
             const totalDays = new Date(year, month + 1, 0).getDate();
             const prevTotalDays = new Date(year, month, 0).getDate();
 
-            // Jours du mois précédent pour compléter la première ligne
+            // Jours du mois précédent
             for (let i = firstDayIndex; i > 0; i--) {
                 const dayDiv = document.createElement("div");
                 dayDiv.className = "calendar-day other-month";
@@ -315,23 +370,19 @@
             let timelineHtml = "";
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement("div");
-                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                
-                const dateObj = new Date(year, month, day);
-                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                const currentDay = new Date(year, month, day);
+                const isWeekend = currentDay.getDay() === 0 || currentDay.getDay() === 6;
 
                 dayDiv.className = `calendar-day ${isWeekend ? 'weekend' : ''}`;
                 dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
 
-                // Vérifier les visites qui impactent ce jour (gestion des séjours multi-jours)
                 let dayVisits = [];
                 visits.forEach(v => {
-                    let startDate = new Date(v.start);
+                    let startDate = parseLocalDate(v.start);
                     let endDate = new Date(startDate);
                     endDate.setDate(startDate.getDate() + v.days - 1);
 
-                    let currentDayTime = dateObj.setHours(0,0,0,0);
-                    if (currentDayTime >= startDate.setHours(0,0,0,0) && currentDayTime <= endDate.setHours(0,0,0,0)) {
+                    if (currentDay >= startDate && currentDay <= endDate) {
                         dayVisits.push(v);
                         const tag = document.createElement("div");
                         tag.className = "visit-tag";
@@ -343,7 +394,6 @@
 
                 daysContainer.appendChild(dayDiv);
 
-                // Construction de la vue chronologique du mois
                 if (dayVisits.length > 0) {
                     timelineHtml += `
                         <div class="timeline-item">
@@ -370,17 +420,15 @@
                 return;
             }
 
-            // Protection par code
             const code = prompt("Veuillez entrer le code secret de modification :");
             if (code !== "DENIS") {
                 alert("Code incorrect. Modification annulée.");
                 return;
             }
 
-            // Ajout de la visite
             visits.push({ name, start, days, comment });
+            localStorage.setItem('family_visits', JSON.stringify(visits));
 
-            // Reset du formulaire
             document.getElementById("visitor-name").value = "";
             document.getElementById("visit-start").value = "";
             document.getElementById("visit-days").value = "1";
@@ -390,8 +438,7 @@
             alert("Visite ajoutée avec succès !");
         }
 
-        // Lancement au chargement
-        initCalendar();
+        renderCalendar();
     </script>
 </body>
 </html>
