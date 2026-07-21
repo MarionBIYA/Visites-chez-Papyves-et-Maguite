@@ -16,6 +16,7 @@
             --border-color: #e7e5e4;
             --danger: #ef4444;
             --danger-dark: #dc2626;
+            --danger-light: #fee2e2;
         }
 
         body {
@@ -175,6 +176,7 @@
             font-size: 0.8rem;
         }
 
+        /* Tags Visite (Orange) */
         .visit-tag {
             background: var(--primary-light);
             color: #92400e;
@@ -187,6 +189,22 @@
             border-left: 3px solid var(--primary);
             cursor: pointer;
             display: block;
+        }
+
+        /* Tags Absence (Rouge) */
+        .absence-tag {
+            background: var(--danger);
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-left: 3px solid var(--danger-dark);
+            cursor: pointer;
+            display: block;
+            font-weight: 500;
         }
 
         .dots-container {
@@ -206,8 +224,13 @@
             transition: transform 0.1s ease;
         }
 
-        .visit-dot-bullet:active {
-            transform: scale(1.3);
+        .absence-dot-bullet {
+            width: 10px;
+            height: 10px;
+            background-color: var(--danger);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s ease;
         }
 
         .timeline-item {
@@ -240,6 +263,12 @@
             font-size: 0.85rem;
             cursor: pointer;
             border-left: 3px solid var(--primary);
+        }
+
+        .timeline-badge.absence {
+            background: var(--danger-light);
+            color: var(--danger-dark);
+            border-left: 3px solid var(--danger);
         }
 
         .modal-overlay {
@@ -315,7 +344,6 @@
             font-size: 0.9rem;
         }
 
-        /* Section Repas */
         .meals-section {
             background-color: var(--bg-color);
             padding: 10px 12px;
@@ -356,6 +384,42 @@
             font-size: 0.8rem;
         }
 
+        .recap-item {
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .recap-label {
+            font-weight: bold;
+            color: #78716c;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .recap-value {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .recap-badge-list {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 4px;
+        }
+
+        .recap-badge-item {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            display: inline-block;
+        }
+
         .modal-actions {
             display: flex;
             justify-content: space-between;
@@ -382,7 +446,7 @@
             .calendar-day { min-height: 52px; padding: 3px; }
             .day-number { font-size: 0.75rem; text-align: center; }
             
-            .visit-tag { display: none; }
+            .visit-tag, .absence-tag { display: none; }
             .dots-container { display: flex; }
             
             .timeline-item { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -403,7 +467,7 @@
                 <button id="btn-view-grid" class="toggle-btn active">📅 Grille Mois</button>
                 <button id="btn-view-list" class="toggle-btn">📋 Vue Déroulante</button>
             </div>
-            <button id="btn-open-add-modal" class="primary-btn">➕ Ajouter une visite</button>
+            <button id="btn-open-add-modal" class="primary-btn">➕ Ajouter un événement</button>
         </div>
 
         <div class="calendar-nav">
@@ -437,57 +501,93 @@
     <div id="visit-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3 id="modal-title">➕ Ajouter une visite</h3>
+                <h3 id="modal-title">➕ Ajouter un événement</h3>
                 <button id="btn-close-modal" class="close-modal">✕</button>
             </div>
             
             <input type="hidden" id="visit-id">
 
-            <div class="form-group">
-                <label for="visitor-name">Nom / Prénom</label>
-                <input type="text" id="visitor-name" placeholder="Ex: Thomas & Julie">
-            </div>
-            
-            <div style="display: flex; gap: 10px;">
-                <div class="form-group" style="flex: 2;">
-                    <label for="visit-start">Date de début</label>
-                    <input type="date" id="visit-start">
+            <!-- VUE RÉCAPITULATIF (détails uniquement) -->
+            <div id="modal-recap-content" class="hidden">
+                <div class="recap-item">
+                    <div class="recap-label" id="recap-type-label">Événement</div>
+                    <div id="recap-name" class="recap-value" style="font-size: 1.1rem; font-weight: bold;"></div>
                 </div>
-                <div class="form-group" style="flex: 1;">
-                    <label for="visit-days">Jours</label>
-                    <input type="number" id="visit-days" value="1" min="1">
+
+                <div class="recap-item">
+                    <div class="recap-label">Période</div>
+                    <div id="recap-dates" class="recap-value"></div>
+                </div>
+
+                <div id="recap-meals-group" class="recap-item">
+                    <div class="recap-label">Repas prévus</div>
+                    <div id="recap-meals" class="recap-badge-list"></div>
+                </div>
+
+                <div id="recap-comment-group" class="recap-item">
+                    <div class="recap-label">Commentaire</div>
+                    <div id="recap-comment" class="recap-value" style="font-style: italic;"></div>
                 </div>
             </div>
 
-            <!-- NOUVELLE SECTION REPAS -->
-            <div class="meals-section">
-                <div class="meals-title">🍽️ Nous serons là pour :</div>
+            <!-- VUE FORMULAIRE (Édition/Ajout) -->
+            <div id="modal-form-content">
                 
-                <div class="meal-row">
-                    <label class="meal-checkbox-label">
-                        <input type="checkbox" id="chk-breakfast"> 🥐 Petit-déjeuner
-                    </label>
-                    <select id="sel-breakfast" class="meal-select" disabled></select>
+                <div class="form-group">
+                    <label for="event-type">Type d'événement</label>
+                    <select id="event-type">
+                        <option value="visit">👋 Visite d'un proche</option>
+                        <option value="absence">🚫 Absence de Papyves & Maguite</option>
+                    </select>
                 </div>
 
-                <div class="meal-row">
-                    <label class="meal-checkbox-label">
-                        <input type="checkbox" id="chk-lunch"> 🥗 Déjeuner
-                    </label>
-                    <select id="sel-lunch" class="meal-select" disabled></select>
+                <div class="form-group">
+                    <label for="visitor-name" id="label-visitor-name">Nom / Prénom</label>
+                    <input type="text" id="visitor-name" placeholder="Ex: Thomas & Julie">
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="visit-start">Date de début</label>
+                        <input type="date" id="visit-start">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="visit-days">Jours</label>
+                        <input type="number" id="visit-days" value="1" min="1">
+                    </div>
                 </div>
 
-                <div class="meal-row">
-                    <label class="meal-checkbox-label">
-                        <input type="checkbox" id="chk-dinner"> 🍲 Dîner
-                    </label>
-                    <select id="sel-dinner" class="meal-select" disabled></select>
-                </div>
-            </div>
+                <!-- SECTION REPAS (Masquée si Absence) -->
+                <div class="meals-section" id="meals-section-container">
+                    <div class="meals-title">🍽️ Nous serons là pour :</div>
+                    
+                    <div class="meal-row">
+                        <label class="meal-checkbox-label">
+                            <input type="checkbox" id="chk-breakfast"> 🥐 Petit-déjeuner
+                        </label>
+                        <select id="sel-breakfast" class="meal-select" disabled></select>
+                    </div>
 
-            <div class="form-group">
-                <label for="visit-comment">Commentaire (facultatif)</label>
-                <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
+                    <div class="meal-row">
+                        <label class="meal-checkbox-label">
+                            <input type="checkbox" id="chk-lunch"> 🥗 Déjeuner
+                        </label>
+                        <select id="sel-lunch" class="meal-select" disabled></select>
+                    </div>
+
+                    <div class="meal-row">
+                        <label class="meal-checkbox-label">
+                            <input type="checkbox" id="chk-dinner"> 🍲 Dîner
+                        </label>
+                        <select id="sel-dinner" class="meal-select" disabled></select>
+                    </div>
+                </div>
+
+                <!-- COMMENTAIRE (Masqué si Absence) -->
+                <div class="form-group" id="comment-section-container">
+                    <label for="visit-comment">Commentaire (facultatif)</label>
+                    <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
+                </div>
             </div>
 
             <div class="modal-actions">
@@ -496,6 +596,7 @@
                 </div>
                 <div class="modal-actions-right">
                     <button id="btn-cancel-modal">Annuler</button>
+                    <button id="btn-edit-mode" class="primary-btn hidden">✏️ Modifier</button>
                     <button id="btn-save-visit" class="primary-btn">Enregistrer</button>
                 </div>
             </div>
@@ -524,7 +625,6 @@
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-        // Remplir les listes déroulantes de 1 à 10 pers.
         function initMealSelects() {
             ['sel-breakfast', 'sel-lunch', 'sel-dinner'].forEach(id => {
                 const select = document.getElementById(id);
@@ -539,7 +639,6 @@
         }
         initMealSelects();
 
-        // Gestion de l'activation/désactivation des selects
         function bindMealCheckbox(chkId, selId) {
             const chk = document.getElementById(chkId);
             const sel = document.getElementById(selId);
@@ -550,6 +649,31 @@
         bindMealCheckbox('chk-breakfast', 'sel-breakfast');
         bindMealCheckbox('chk-lunch', 'sel-lunch');
         bindMealCheckbox('chk-dinner', 'sel-dinner');
+
+        // Gestion du basculement Visite / Absence dans le formulaire
+        const eventTypeSelect = document.getElementById("event-type");
+        eventTypeSelect.addEventListener("change", () => {
+            toggleFormFields(eventTypeSelect.value);
+        });
+
+        function toggleFormFields(type) {
+            const labelName = document.getElementById("label-visitor-name");
+            const inputName = document.getElementById("visitor-name");
+            const mealsContainer = document.getElementById("meals-section-container");
+            const commentContainer = document.getElementById("comment-section-container");
+
+            if (type === "absence") {
+                labelName.innerText = "Titre / Motif de l'absence";
+                inputName.placeholder = "Ex: Vacances à la mer";
+                mealsContainer.classList.add("hidden");
+                commentContainer.classList.add("hidden");
+            } else {
+                labelName.innerText = "Nom / Prénom";
+                inputName.placeholder = "Ex: Thomas & Julie";
+                mealsContainer.classList.remove("hidden");
+                commentContainer.classList.remove("hidden");
+            }
+        }
 
         onSnapshot(collection(db, "visits"), (snapshot) => {
             visits = [];
@@ -574,36 +698,120 @@
         }
 
         function openModalForAdd() {
-            document.getElementById("modal-title").innerText = "➕ Ajouter une visite";
+            document.getElementById("modal-title").innerText = "➕ Ajouter un événement";
             document.getElementById("visit-id").value = "";
+            document.getElementById("event-type").value = "visit";
+            toggleFormFields("visit");
+
             document.getElementById("visitor-name").value = "";
             document.getElementById("visit-start").value = "";
             document.getElementById("visit-days").value = "1";
             document.getElementById("visit-comment").value = "";
 
-            // Réinitialiser les repas
             ['breakfast', 'lunch', 'dinner'].forEach(m => {
                 document.getElementById(`chk-${m}`).checked = false;
                 document.getElementById(`sel-${m}`).disabled = true;
                 document.getElementById(`sel-${m}`).value = "1";
             });
 
+            document.getElementById("modal-recap-content").classList.add("hidden");
+            document.getElementById("modal-form-content").classList.remove("hidden");
+
             document.getElementById("btn-delete-visit").classList.add("hidden");
+            document.getElementById("btn-edit-mode").classList.add("hidden");
+            document.getElementById("btn-save-visit").classList.remove("hidden");
+
             document.getElementById("visit-modal").classList.add("active");
         }
 
-        function openModalForEdit(id) {
+        function openModalForView(id) {
             const visit = visits.find(v => v.id === id);
             if (!visit) return;
 
-            document.getElementById("modal-title").innerText = "✏️ Modifier la visite";
+            const isAbsence = visit.type === "absence";
+
+            document.getElementById("modal-title").innerText = isAbsence ? "🚫 Détails de l'absence" : "📋 Détails de la visite";
             document.getElementById("visit-id").value = visit.id;
+
+            document.getElementById("recap-type-label").innerText = isAbsence ? "Absence" : "Visiteur(s)";
+            
+            const recapName = document.getElementById("recap-name");
+            recapName.innerText = visit.name;
+            recapName.style.color = isAbsence ? "var(--danger)" : "var(--primary-dark)";
+
+            const startDate = parseLocalDate(visit.start);
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + (visit.days - 1));
+
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            if (visit.days === 1) {
+                document.getElementById("recap-dates").innerText = `Le ${startDate.toLocaleDateString('fr-FR', options)}`;
+            } else {
+                document.getElementById("recap-dates").innerText = `Du ${startDate.toLocaleDateString('fr-FR', options)} au ${endDate.toLocaleDateString('fr-FR', options)} (${visit.days} jours)`;
+            }
+
+            const mealsGroup = document.getElementById("recap-meals-group");
+            const commentGroup = document.getElementById("recap-comment-group");
+
+            if (isAbsence) {
+                mealsGroup.classList.add("hidden");
+                commentGroup.classList.add("hidden");
+            } else {
+                mealsGroup.classList.remove("hidden");
+                commentGroup.classList.remove("hidden");
+
+                const mealsList = document.getElementById("recap-meals");
+                mealsList.innerHTML = "";
+                let hasMeals = false;
+
+                if (visit.meals) {
+                    if (visit.meals.breakfast?.active) {
+                        mealsList.innerHTML += `<div class="recap-badge-item">🥐 Petit-déjeuner (${visit.meals.breakfast.count} pers.)</div>`;
+                        hasMeals = true;
+                    }
+                    if (visit.meals.lunch?.active) {
+                        mealsList.innerHTML += `<div class="recap-badge-item">🥗 Déjeuner (${visit.meals.lunch.count} pers.)</div>`;
+                        hasMeals = true;
+                    }
+                    if (visit.meals.dinner?.active) {
+                        mealsList.innerHTML += `<div class="recap-badge-item">🍲 Dîner (${visit.meals.dinner.count} pers.)</div>`;
+                        hasMeals = true;
+                    }
+                }
+                if (!hasMeals) {
+                    mealsList.innerHTML = `<span style="color:#78716c; font-style:italic;">Aucun repas spécifié</span>`;
+                }
+
+                document.getElementById("recap-comment").innerText = visit.comment ? `« ${visit.comment} »` : "Aucun commentaire.";
+            }
+
+            document.getElementById("modal-recap-content").classList.remove("hidden");
+            document.getElementById("modal-form-content").classList.add("hidden");
+
+            document.getElementById("btn-delete-visit").classList.add("hidden");
+            document.getElementById("btn-save-visit").classList.add("hidden");
+            document.getElementById("btn-edit-mode").classList.remove("hidden");
+
+            document.getElementById("visit-modal").classList.add("active");
+        }
+
+        function switchToEditMode() {
+            if (!checkPasscode()) return;
+
+            const id = document.getElementById("visit-id").value;
+            const visit = visits.find(v => v.id === id);
+            if (!visit) return;
+
+            const type = visit.type || "visit";
+            document.getElementById("modal-title").innerText = type === "absence" ? "✏️ Modifier l'absence" : "✏️ Modifier la visite";
+            document.getElementById("event-type").value = type;
+            toggleFormFields(type);
+
             document.getElementById("visitor-name").value = visit.name;
             document.getElementById("visit-start").value = visit.start;
             document.getElementById("visit-days").value = visit.days;
             document.getElementById("visit-comment").value = visit.comment || "";
 
-            // Charger les repas
             ['breakfast', 'lunch', 'dinner'].forEach(m => {
                 const mealData = visit.meals ? visit.meals[m] : null;
                 const chk = document.getElementById(`chk-${m}`);
@@ -619,8 +827,12 @@
                 }
             });
 
+            document.getElementById("modal-recap-content").classList.add("hidden");
+            document.getElementById("modal-form-content").classList.remove("hidden");
+
             document.getElementById("btn-delete-visit").classList.remove("hidden");
-            document.getElementById("visit-modal").classList.add("active");
+            document.getElementById("btn-edit-mode").classList.add("hidden");
+            document.getElementById("btn-save-visit").classList.remove("hidden");
         }
 
         function closeModal() {
@@ -696,18 +908,19 @@
 
                     if (currentDay >= startDate && currentDay <= endDate) {
                         dayVisits.push(v);
+                        const isAbsence = v.type === "absence";
 
                         const tag = document.createElement("div");
-                        tag.className = "visit-tag";
-                        tag.title = `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
-                        tag.innerText = v.name;
-                        tag.onclick = (e) => { e.stopPropagation(); openModalForEdit(v.id); };
+                        tag.className = isAbsence ? "absence-tag" : "visit-tag";
+                        tag.title = isAbsence ? `ABSENCE: ${v.name}` : `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
+                        tag.innerText = isAbsence ? `🚫 ${v.name}` : v.name;
+                        tag.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
                         dayDiv.appendChild(tag);
 
                         const dot = document.createElement("div");
-                        dot.className = "visit-dot-bullet";
-                        dot.title = `${v.name} (Cliquer pour voir/modifier)`;
-                        dot.onclick = (e) => { e.stopPropagation(); openModalForEdit(v.id); };
+                        dot.className = isAbsence ? "absence-dot-bullet" : "visit-dot-bullet";
+                        dot.title = `${v.name} (Cliquer pour détails)`;
+                        dot.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
                         dotsContainer.appendChild(dot);
                     }
                 });
@@ -720,21 +933,26 @@
                         <div class="timeline-item">
                             <div class="timeline-date">${day} ${monthNames[month]}</div>
                             <div class="timeline-content">
-                                ${dayVisits.map(v => `
-                                    <span class="timeline-badge" data-id="${v.id}">
-                                        <strong>${v.name}</strong> ${formatMealSummary(v.meals)} ${v.comment ? '(' + v.comment + ')' : ''}
-                                    </span>
-                                `).join('')}
+                                ${dayVisits.map(v => {
+                                    const isAbsence = v.type === "absence";
+                                    return `
+                                        <span class="timeline-badge ${isAbsence ? 'absence' : ''}" data-id="${v.id}">
+                                            <strong>${isAbsence ? '🚫 ABSENCE: ' + v.name : v.name}</strong> 
+                                            ${!isAbsence ? formatMealSummary(v.meals) : ''} 
+                                            ${v.comment && !isAbsence ? '(' + v.comment + ')' : ''}
+                                        </span>
+                                    `;
+                                }).join('')}
                             </div>
                         </div>
                     `;
                 }
             }
 
-            document.getElementById("timeline-container").innerHTML = timelineHtml || "<p style='color:#78716c; font-style:italic;'>Aucune visite enregistrée pour ce mois-ci.</p>";
+            document.getElementById("timeline-container").innerHTML = timelineHtml || "<p style='color:#78716c; font-style:italic;'>Aucun événement enregistré pour ce mois-ci.</p>";
             
             document.querySelectorAll('.timeline-badge').forEach(badge => {
-                badge.addEventListener('click', () => openModalForEdit(badge.dataset.id));
+                badge.addEventListener('click', () => openModalForView(badge.dataset.id));
             });
         }
 
@@ -742,43 +960,48 @@
             const id = document.getElementById("visit-id").value;
 
             if (isDelete) {
-                if (confirm("Voulez-vous vraiment supprimer cette visite ?")) {
-                    if (!checkPasscode()) return;
+                if (confirm("Voulez-vous vraiment supprimer cet événement ?")) {
                     await deleteDoc(doc(db, "visits", id));
                     closeModal();
                 }
                 return;
             }
 
+            const type = document.getElementById("event-type").value;
             const name = document.getElementById("visitor-name").value.trim();
             const start = document.getElementById("visit-start").value;
             const days = parseInt(document.getElementById("visit-days").value);
-            const comment = document.getElementById("visit-comment").value.trim();
 
             if (!name || !start) {
-                alert("Veuillez remplir au moins le nom et la date de début.");
+                alert("Veuillez remplir le titre/nom et la date de début.");
                 return;
             }
 
-            if (!checkPasscode()) return;
+            if (!id) {
+                if (!checkPasscode()) return;
+            }
 
-            // Enregistrer l'état des repas
-            const meals = {
-                breakfast: {
-                    active: document.getElementById("chk-breakfast").checked,
-                    count: parseInt(document.getElementById("sel-breakfast").value)
-                },
-                lunch: {
-                    active: document.getElementById("chk-lunch").checked,
-                    count: parseInt(document.getElementById("sel-lunch").value)
-                },
-                dinner: {
-                    active: document.getElementById("chk-dinner").checked,
-                    count: parseInt(document.getElementById("sel-dinner").value)
-                }
-            };
+            let visitData = { type, name, start, days };
 
-            const visitData = { name, start, days, comment, meals };
+            if (type === "visit") {
+                const comment = document.getElementById("visit-comment").value.trim();
+                const meals = {
+                    breakfast: {
+                        active: document.getElementById("chk-breakfast").checked,
+                        count: parseInt(document.getElementById("sel-breakfast").value)
+                    },
+                    lunch: {
+                        active: document.getElementById("chk-lunch").checked,
+                        count: parseInt(document.getElementById("sel-lunch").value)
+                    },
+                    dinner: {
+                        active: document.getElementById("chk-dinner").checked,
+                        count: parseInt(document.getElementById("sel-dinner").value)
+                    }
+                };
+                visitData.comment = comment;
+                visitData.meals = meals;
+            }
 
             if (id) {
                 await updateDoc(doc(db, "visits", id), visitData);
@@ -794,6 +1017,7 @@
         document.getElementById("btn-open-add-modal").onclick = openModalForAdd;
         document.getElementById("btn-close-modal").onclick = closeModal;
         document.getElementById("btn-cancel-modal").onclick = closeModal;
+        document.getElementById("btn-edit-mode").onclick = switchToEditMode;
         document.getElementById("btn-save-visit").onclick = () => saveOrDeleteVisit(false);
         document.getElementById("btn-delete-visit").onclick = () => saveOrDeleteVisit(true);
 
