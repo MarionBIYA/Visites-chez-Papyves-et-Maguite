@@ -197,19 +197,17 @@
             display: block;
         }
 
-        .absence-tag {
-            background: #f87171;
-            color: white;
+        /* Texte d'absence direct en rouge sans encadré */
+        .absence-text {
+            color: var(--danger-dark);
             font-size: 0.75rem;
-            padding: 3px 5px;
-            border-radius: 4px;
+            padding: 2px 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            border-left: 3px solid var(--danger-dark);
             cursor: pointer;
             display: block;
-            font-weight: 500;
+            font-weight: 600;
         }
 
         .dots-container {
@@ -452,7 +450,7 @@
             .calendar-day { min-height: 52px; padding: 3px; }
             .day-number { font-size: 0.75rem; text-align: center; }
             
-            .visit-tag, .absence-tag { display: none; }
+            .visit-tag, .absence-text { display: none; }
             .dots-container { display: flex; }
             
             .timeline-item { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -858,7 +856,7 @@
             } else {
                 gridContainer.classList.add("hidden");
                 listContainer.classList.remove("hidden");
-                navBar.classList.add("hidden"); // On masque les flèches du mois en vue liste
+                navBar.classList.add("hidden");
                 btnGrid.classList.remove("active");
                 btnList.classList.add("active");
             }
@@ -925,9 +923,15 @@
                     const isAbsence = v.type === "absence";
 
                     const tag = document.createElement("div");
-                    tag.className = isAbsence ? "absence-tag" : "visit-tag";
-                    tag.title = isAbsence ? `Absence: ${v.name}` : `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
-                    tag.innerText = isAbsence ? `Absence: ${v.name}` : v.name;
+                    if (isAbsence) {
+                        tag.className = "absence-text";
+                        tag.title = `Absence: ${v.name}`;
+                        tag.innerText = `Absence: ${v.name}`;
+                    } else {
+                        tag.className = "visit-tag";
+                        tag.title = `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
+                        tag.innerText = v.name;
+                    }
                     tag.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
                     dayDiv.appendChild(tag);
 
@@ -946,7 +950,6 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // Filtrer les événements pour ne garder que ceux qui ne sont pas finis
             const upcomingVisits = visits.filter(v => {
                 const startDate = parseLocalDate(v.start);
                 const endDate = new Date(startDate);
@@ -954,7 +957,6 @@
                 return endDate >= today;
             });
 
-            // Trier chronologiquement du plus proche au plus éloigné
             upcomingVisits.sort((a, b) => parseLocalDate(a.start) - parseLocalDate(b.start));
 
             let timelineHtml = "";
