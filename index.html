@@ -269,7 +269,7 @@
         <!-- Barre supérieure : choix de vue à gauche, bouton d'ajout à droite -->
         <div class="top-bar">
             <div class="view-toggle">
-                <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Par Mois</button>
+                <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
                 <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
             </div>
             <button class="primary-btn" onclick="toggleAddForm()">➕ Ajouter une visite</button>
@@ -335,6 +335,9 @@
         let currentDate = new Date();
         let currentView = 'grid';
         
+        let defaultVisits = [
+            { name: "Lucas", start: "2026-07-25", days: 3, comment: "Vacances d'été" },
+            { name: "Sophie & Marc", start: "2026-07-28", days: 2, comment: "Passe un coucou" }
         ];
         let visits = JSON.parse(localStorage.getItem('family_visits')) || defaultVisits;
 
