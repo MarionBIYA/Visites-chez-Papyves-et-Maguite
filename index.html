@@ -52,12 +52,19 @@
             font-size: 1rem;
         }
 
-        /* Onglets de choix de vue */
+        /* Barre d'action supérieure (Modes de vue + Bouton Ajouter) */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
         .view-toggle {
             display: flex;
-            justify-content: center;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 8px;
         }
 
         .toggle-btn {
@@ -75,6 +82,60 @@
             background: var(--primary);
             color: white;
             border-color: var(--primary);
+        }
+
+        /* Formulaire pliable (Accordéon) */
+        .action-section {
+            background: var(--bg-color);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .action-section h3 {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--primary);
+            font-size: 1.1rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 12px;
         }
 
         /* Navigation Mois */
@@ -118,7 +179,7 @@
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             gap: 8px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
 
         .day-header {
@@ -169,45 +230,6 @@
             border-left: 3px solid var(--primary);
         }
 
-        /* Formulaire */
-        .action-section {
-            background: var(--bg-color);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px dashed var(--border-color);
-            margin-top: 20px;
-        }
-
-        .action-section h3 {
-            margin-top: 0;
-            color: var(--primary);
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            margin-bottom: 4px;
-        }
-
-        input {
-            padding: 8px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            font-size: 0.9rem;
-        }
-
         /* Vue déroulante */
         .timeline-view {
             margin-top: 10px;
@@ -230,7 +252,7 @@
             flex-grow: 1;
         }
 
-        /* Utilitaire pour masquer un élément */
+        /* Utilitaire */
         .hidden {
             display: none !important;
         }
@@ -244,10 +266,42 @@
             <p class="subtitle">Le calendrier de la famille, simple et chaleureux</p>
         </header>
 
-        <!-- Sélecteur de vue -->
-        <div class="view-toggle">
-            <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
-            <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
+        <!-- Barre supérieure : choix de vue à gauche, bouton d'ajout à droite -->
+        <div class="top-bar">
+            <div class="view-toggle">
+                <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
+                <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
+            </div>
+            <button class="primary-btn" onclick="toggleAddForm()">➕ Ajouter une visite</button>
+        </div>
+
+        <!-- Onglet / Formulaire dépliant (masqué par défaut) -->
+        <div id="add-visit-form" class="action-section hidden">
+            <h3>Nouveau séjour chez Papyves & Maguite</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="visitor-name">Nom / Prénom</label>
+                    <input type="text" id="visitor-name" placeholder="Ex: Thomas & Julie">
+                </div>
+                <div class="form-group">
+                    <label for="visit-start">Date de début</label>
+                    <input type="date" id="visit-start">
+                </div>
+                <div class="form-group">
+                    <label for="visit-days">Nombre de jours</label>
+                    <input type="number" id="visit-days" value="1" min="1">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="visit-comment">Commentaire (facultatif)</label>
+                    <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
+                </div>
+            </div>
+            <div class="form-actions">
+                <button onclick="toggleAddForm()">Annuler</button>
+                <button class="primary-btn" onclick="addVisit()">Enregistrer la visite</button>
+            </div>
         </div>
 
         <!-- Navigation Mois -->
@@ -275,41 +329,12 @@
         <div id="list-view-container" class="timeline-view hidden">
             <div id="timeline-container"></div>
         </div>
-
-        <!-- Formulaire d'ajout -->
-        <div class="action-section">
-            <h3>➕ Ajouter une présence</h3>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="visitor-name">Nom / Prénom</label>
-                    <input type="text" id="visitor-name" placeholder="Ex: Thomas & Julie">
-                </div>
-                <div class="form-group">
-                    <label for="visit-start">Date de début</label>
-                    <input type="date" id="visit-start">
-                </div>
-                <div class="form-group">
-                    <label for="visit-days">Nombre de jours</label>
-                    <input type="number" id="visit-days" value="1" min="1">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group" style="grid-column: 1 / -1;">
-                    <label for="visit-comment">Commentaire (facultatif)</label>
-                    <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
-                </div>
-            </div>
-            <button class="primary-btn" onclick="addVisit()">Enregistrer la visite</button>
-        </div>
     </div>
 
     <script>
         let currentDate = new Date();
-        let currentView = 'grid'; // 'grid' ou 'list'
+        let currentView = 'grid';
         
-        let defaultVisits = [
-            { name: "Lucas", start: "2026-07-25", days: 3, comment: "Vacances d'été" },
-            { name: "Sophie & Marc", start: "2026-07-28", days: 2, comment: "Passe un coucou" }
         ];
         let visits = JSON.parse(localStorage.getItem('family_visits')) || defaultVisits;
 
@@ -318,6 +343,11 @@
         function parseLocalDate(dateStr) {
             const [year, month, day] = dateStr.split('-').map(Number);
             return new Date(year, month - 1, day);
+        }
+
+        function toggleAddForm() {
+            const form = document.getElementById("add-visit-form");
+            form.classList.toggle("hidden");
         }
 
         function setView(view) {
@@ -429,10 +459,12 @@
             visits.push({ name, start, days, comment });
             localStorage.setItem('family_visits', JSON.stringify(visits));
 
+            // Réinitialisation des champs et fermeture du formulaire
             document.getElementById("visitor-name").value = "";
             document.getElementById("visit-start").value = "";
             document.getElementById("visit-days").value = "1";
             document.getElementById("visit-comment").value = "";
+            toggleAddForm();
 
             renderCalendar();
             alert("Visite ajoutée avec succès !");
