@@ -16,6 +16,7 @@
             --border-color: #e7e5e4;
             --danger: #ef4444;
             --danger-dark: #dc2626;
+            --danger-bg: rgba(239, 68, 68, 0.18);
             --danger-light: #fee2e2;
         }
 
@@ -161,10 +162,16 @@
             flex-direction: column;
             gap: 3px;
             overflow: hidden;
+            transition: background-color 0.2s ease;
         }
 
         .calendar-day.weekend {
             background-color: var(--weekend-bg);
+        }
+
+        .calendar-day.has-absence {
+            background-color: var(--danger-bg) !important;
+            border-color: #fca5a5;
         }
 
         .calendar-day.other-month {
@@ -176,7 +183,6 @@
             font-size: 0.8rem;
         }
 
-        /* Tags Visite (Orange) */
         .visit-tag {
             background: var(--primary-light);
             color: #92400e;
@@ -191,9 +197,8 @@
             display: block;
         }
 
-        /* Tags Absence (Rouge) */
         .absence-tag {
-            background: var(--danger);
+            background: #f87171;
             color: white;
             font-size: 0.75rem;
             padding: 3px 5px;
@@ -507,7 +512,7 @@
             
             <input type="hidden" id="visit-id">
 
-            <!-- VUE RÉCAPITULATIF (détails uniquement) -->
+            <!-- VUE RÉCAPITULATIF -->
             <div id="modal-recap-content" class="hidden">
                 <div class="recap-item">
                     <div class="recap-label" id="recap-type-label">Événement</div>
@@ -530,14 +535,13 @@
                 </div>
             </div>
 
-            <!-- VUE FORMULAIRE (Édition/Ajout) -->
+            <!-- VUE FORMULAIRE -->
             <div id="modal-form-content">
-                
                 <div class="form-group">
                     <label for="event-type">Type d'événement</label>
                     <select id="event-type">
-                        <option value="visit">👋 Visite d'un proche</option>
-                        <option value="absence">🚫 Absence de Papyves & Maguite</option>
+                        <option value="visit">Visite chez Papyves et Maguite</option>
+                        <option value="absence">Absence de Papyves et Maguite</option>
                     </select>
                 </div>
 
@@ -557,7 +561,6 @@
                     </div>
                 </div>
 
-                <!-- SECTION REPAS (Masquée si Absence) -->
                 <div class="meals-section" id="meals-section-container">
                     <div class="meals-title">🍽️ Nous serons là pour :</div>
                     
@@ -583,7 +586,6 @@
                     </div>
                 </div>
 
-                <!-- COMMENTAIRE (Masqué si Absence) -->
                 <div class="form-group" id="comment-section-container">
                     <label for="visit-comment">Commentaire (facultatif)</label>
                     <input type="text" id="visit-comment" placeholder="Ex: On arrive pour le goûter !">
@@ -650,7 +652,6 @@
         bindMealCheckbox('chk-lunch', 'sel-lunch');
         bindMealCheckbox('chk-dinner', 'sel-dinner');
 
-        // Gestion du basculement Visite / Absence dans le formulaire
         const eventTypeSelect = document.getElementById("event-type");
         eventTypeSelect.addEventListener("change", () => {
             toggleFormFields(eventTypeSelect.value);
@@ -663,7 +664,7 @@
             const commentContainer = document.getElementById("comment-section-container");
 
             if (type === "absence") {
-                labelName.innerText = "Titre / Motif de l'absence";
+                labelName.innerText = "Motif de l'absence";
                 inputName.placeholder = "Ex: Vacances à la mer";
                 mealsContainer.classList.add("hidden");
                 commentContainer.classList.add("hidden");
@@ -730,10 +731,11 @@
 
             const isAbsence = visit.type === "absence";
 
-            document.getElementById("modal-title").innerText = isAbsence ? "🚫 Détails de l'absence" : "📋 Détails de la visite";
+            document.getElementById("modal-title").innerText = isAbsence ? "Détails de l'absence" : "📋 Détails de la visite";
             document.getElementById("visit-id").value = visit.id;
 
-            document.getElementById("recap-type-label").innerText = isAbsence ? "Absence" : "Visiteur(s)";
+            // Définition explicite du titre de la section récapitulative
+            document.getElementById("recap-type-label").innerText = isAbsence ? "Absence de Papyves et Maguite" : "Visiteur(s)";
             
             const recapName = document.getElementById("recap-name");
             recapName.innerText = visit.name;
@@ -894,13 +896,9 @@
                 const currentDay = new Date(year, month, day);
                 const isWeekend = currentDay.getDay() === 0 || currentDay.getDay() === 6;
 
-                dayDiv.className = `calendar-day ${isWeekend ? 'weekend' : ''}`;
-                dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
-
-                const dotsContainer = document.createElement("div");
-                dotsContainer.className = "dots-container";
-
                 let dayVisits = [];
+                let hasAbsence = false;
+
                 visits.forEach(v => {
                     let startDate = parseLocalDate(v.start);
                     let endDate = new Date(startDate);
@@ -908,21 +906,33 @@
 
                     if (currentDay >= startDate && currentDay <= endDate) {
                         dayVisits.push(v);
-                        const isAbsence = v.type === "absence";
-
-                        const tag = document.createElement("div");
-                        tag.className = isAbsence ? "absence-tag" : "visit-tag";
-                        tag.title = isAbsence ? `ABSENCE: ${v.name}` : `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
-                        tag.innerText = isAbsence ? `🚫 ${v.name}` : v.name;
-                        tag.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
-                        dayDiv.appendChild(tag);
-
-                        const dot = document.createElement("div");
-                        dot.className = isAbsence ? "absence-dot-bullet" : "visit-dot-bullet";
-                        dot.title = `${v.name} (Cliquer pour détails)`;
-                        dot.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
-                        dotsContainer.appendChild(dot);
+                        if (v.type === "absence") {
+                            hasAbsence = true;
+                        }
                     }
+                });
+
+                dayDiv.className = `calendar-day ${isWeekend ? 'weekend' : ''} ${hasAbsence ? 'has-absence' : ''}`;
+                dayDiv.innerHTML = `<div class="day-number">${day}</div>`;
+
+                const dotsContainer = document.createElement("div");
+                dotsContainer.className = "dots-container";
+
+                dayVisits.forEach(v => {
+                    const isAbsence = v.type === "absence";
+
+                    const tag = document.createElement("div");
+                    tag.className = isAbsence ? "absence-tag" : "visit-tag";
+                    tag.title = isAbsence ? `Absence: ${v.name}` : `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
+                    tag.innerText = isAbsence ? `Absence: ${v.name}` : v.name;
+                    tag.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
+                    dayDiv.appendChild(tag);
+
+                    const dot = document.createElement("div");
+                    dot.className = isAbsence ? "absence-dot-bullet" : "visit-dot-bullet";
+                    dot.title = `${v.name} (Cliquer pour détails)`;
+                    dot.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
+                    dotsContainer.appendChild(dot);
                 });
 
                 dayDiv.appendChild(dotsContainer);
@@ -937,7 +947,7 @@
                                     const isAbsence = v.type === "absence";
                                     return `
                                         <span class="timeline-badge ${isAbsence ? 'absence' : ''}" data-id="${v.id}">
-                                            <strong>${isAbsence ? '🚫 ABSENCE: ' + v.name : v.name}</strong> 
+                                            <strong>${isAbsence ? 'Absence: ' + v.name : v.name}</strong> 
                                             ${!isAbsence ? formatMealSummary(v.meals) : ''} 
                                             ${v.comment && !isAbsence ? '(' + v.comment + ')' : ''}
                                         </span>
