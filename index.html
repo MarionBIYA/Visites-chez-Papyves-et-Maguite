@@ -55,11 +55,18 @@
             font-size: 1rem;
         }
 
+        /* Barre supérieure : Onglets de vue + Bouton d'ajout */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 12px;
+        }
+
         .view-toggle {
             display: flex;
-            justify-content: center;
             gap: 10px;
-            margin-bottom: 20px;
         }
 
         .toggle-btn {
@@ -88,12 +95,6 @@
             background: var(--bg-color);
             padding: 12px 16px;
             border-radius: 12px;
-        }
-
-        .nav-left, .nav-right {
-            display: flex;
-            align-items: center;
-            gap: 8px;
         }
 
         button {
@@ -312,16 +313,19 @@
         }
 
         @media (max-width: 600px) {
+            .top-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .view-toggle {
+                justify-content: center;
+            }
             .calendar-day {
                 min-height: 60px;
                 padding: 4px;
             }
             .visit-tag {
                 font-size: 0.65rem;
-            }
-            .calendar-nav {
-                flex-wrap: wrap;
-                justify-content: center;
             }
         }
     </style>
@@ -334,25 +338,24 @@
             <p class="subtitle">Le calendrier de la famille, simple et chaleureux</p>
         </header>
 
-        <div class="view-toggle">
-            <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
-            <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
+        <!-- Barre supérieure alignée -->
+        <div class="top-bar">
+            <div class="view-toggle">
+                <button id="btn-view-grid" class="toggle-btn active" onclick="setView('grid')">📅 Grille Mois</button>
+                <button id="btn-view-list" class="toggle-btn" onclick="setView('list')">📋 Vue Déroulante</button>
+            </div>
+            <button class="primary-btn" onclick="openModalForAdd()">➕ Ajouter une visite</button>
         </div>
 
         <div class="calendar-nav">
-            <div class="nav-left">
-                <button onclick="changeMonth(-1)">‹ Précédent</button>
-                <button onclick="changeMonth(1)">Suivant ›</button>
-            </div>
+            <button onclick="changeMonth(-1)">‹ Précédent</button>
             
             <div style="text-align: center;">
                 <h2 id="current-month-label" style="margin: 0; font-size: 1.1rem;"></h2>
                 <button onclick="goToToday()" style="font-size: 0.75rem; margin-top: 4px; padding: 2px 8px;">Aujourd'hui</button>
             </div>
 
-            <div class="nav-right">
-                <button class="primary-btn" onclick="openModalForAdd()">➕ Ajouter</button>
-            </div>
+            <button onclick="changeMonth(1)">Suivant ›</button>
         </div>
 
         <div id="grid-view-container">
@@ -377,7 +380,7 @@
     <div id="visit-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3 id="modal-title">➕ Ajouter une présence</h3>
+                <h3 id="modal-title">➕ Ajouter une visite</h3>
                 <button class="close-modal" onclick="closeModal()">✕</button>
             </div>
             
@@ -439,7 +442,7 @@
         }
 
         function openModalForAdd() {
-            document.getElementById("modal-title").innerText = "➕ Ajouter une présence";
+            document.getElementById("modal-title").innerText = "➕ Ajouter une visite";
             document.getElementById("visit-id").value = "";
             document.getElementById("visitor-name").value = "";
             document.getElementById("visit-start").value = "";
@@ -596,13 +599,11 @@
             if (!checkPasscode()) return;
 
             if (id) {
-                // Modification d'une visite existante
                 const index = visits.findIndex(v => v.id == id);
                 if (index !== -1) {
                     visits[index] = { id: Number(id), name, start, days, comment };
                 }
             } else {
-                // Création d'une nouvelle visite
                 visits.push({
                     id: Date.now(),
                     name,
