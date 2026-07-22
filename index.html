@@ -18,6 +18,12 @@
             --danger-dark: #dc2626;
             --danger-bg: rgba(239, 68, 68, 0.18);
             --danger-light: #fee2e2;
+            
+            /* Style pour les aidants */
+            --caregiver: #10b981;
+            --caregiver-dark: #047857;
+            --caregiver-light: #d1fae5;
+            --caregiver-bg: rgba(16, 185, 129, 0.15);
         }
 
         body {
@@ -153,7 +159,7 @@
         }
 
         .calendar-day {
-            min-height: 80px;
+            min-height: 85px;
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 4px;
@@ -197,14 +203,28 @@
             display: block;
         }
 
-        /* Texte d'absence direct en rouge sans encadré */
         .absence-text {
             color: var(--danger-dark);
             font-size: 0.75rem;
-            padding: 2px 0;
+            padding: 2px 4px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            cursor: pointer;
+            display: block;
+            font-weight: 600;
+        }
+
+        .caregiver-tag {
+            background: var(--caregiver-light);
+            color: var(--caregiver-dark);
+            font-size: 0.75rem;
+            padding: 3px 5px;
+            border-radius: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-left: 3px solid var(--caregiver);
             cursor: pointer;
             display: block;
             font-weight: 600;
@@ -224,7 +244,6 @@
             background-color: var(--primary);
             border-radius: 50%;
             cursor: pointer;
-            transition: transform 0.1s ease;
         }
 
         .absence-dot-bullet {
@@ -233,7 +252,14 @@
             background-color: var(--danger);
             border-radius: 50%;
             cursor: pointer;
-            transition: transform 0.1s ease;
+        }
+
+        .caregiver-dot-bullet {
+            width: 10px;
+            height: 10px;
+            background-color: var(--caregiver);
+            border-radius: 50%;
+            cursor: pointer;
         }
 
         .timeline-item {
@@ -275,6 +301,12 @@
             border-left: 3px solid var(--danger);
         }
 
+        .timeline-badge.caregiver {
+            background: var(--caregiver-light);
+            color: var(--caregiver-dark);
+            border-left: 3px solid var(--caregiver);
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -301,7 +333,7 @@
             padding: 20px;
             border-radius: 16px;
             width: 90%;
-            max-width: 440px;
+            max-width: 480px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.15);
             max-height: 90vh;
             overflow-y: auto;
@@ -348,7 +380,7 @@
             font-size: 0.9rem;
         }
 
-        .meals-section {
+        .day-meals-block {
             background-color: var(--bg-color);
             padding: 10px 12px;
             border-radius: 8px;
@@ -356,11 +388,13 @@
             margin-bottom: 12px;
         }
 
-        .meals-title {
+        .day-meals-title {
             font-size: 0.85rem;
             font-weight: bold;
             margin-bottom: 8px;
             color: var(--primary-dark);
+            border-bottom: 1px dashed var(--border-color);
+            padding-bottom: 4px;
         }
 
         .meal-row {
@@ -447,10 +481,10 @@
             .top-bar { flex-direction: column; align-items: stretch; }
             .view-toggle { justify-content: center; }
             .top-bar .primary-btn { width: 100%; text-align: center; }
-            .calendar-day { min-height: 52px; padding: 3px; }
+            .calendar-day { min-height: 55px; padding: 3px; }
             .day-number { font-size: 0.75rem; text-align: center; }
             
-            .visit-tag, .absence-text { display: none; }
+            .visit-tag, .absence-text, .caregiver-tag { display: none; }
             .dots-container { display: flex; }
             
             .timeline-item { flex-direction: column; align-items: flex-start; gap: 6px; }
@@ -519,17 +553,22 @@
                 </div>
 
                 <div class="recap-item">
-                    <div class="recap-label">Période</div>
+                    <div class="recap-label">Jour sélectionné</div>
                     <div id="recap-dates" class="recap-value"></div>
                 </div>
 
+                <div id="recap-caregiver-info" class="recap-item hidden">
+                    <div class="recap-label">Créneau de passage</div>
+                    <div id="recap-caregiver-slot" class="recap-value"></div>
+                </div>
+
                 <div id="recap-meals-group" class="recap-item">
-                    <div class="recap-label">Repas prévus</div>
+                    <div class="recap-label">Repas du jour</div>
                     <div id="recap-meals" class="recap-badge-list"></div>
                 </div>
 
                 <div id="recap-comment-group" class="recap-item">
-                    <div class="recap-label">Commentaire</div>
+                    <div class="recap-label">Commentaire de la visite</div>
                     <div id="recap-comment" class="recap-value" style="font-style: italic;"></div>
                 </div>
             </div>
@@ -540,7 +579,8 @@
                     <label for="event-type">Type d'événement</label>
                     <select id="event-type">
                         <option value="visit">Visite chez Papyves et Maguite</option>
-                        <option value="absence">Absence de Papyves et Maguite</option>
+                        <option value="caregiver">🧑‍⚕️ Passage d'aidants</option>
+                        <option value="absence">🚫 Absence de Papyves et Maguite</option>
                     </select>
                 </div>
 
@@ -554,36 +594,48 @@
                         <label for="visit-start">Date de début</label>
                         <input type="date" id="visit-start">
                     </div>
-                    <div class="form-group" style="flex: 1;">
+                    <div class="form-group" style="flex: 1;" id="days-count-container">
                         <label for="visit-days">Jours</label>
-                        <input type="number" id="visit-days" value="1" min="1">
+                        <input type="number" id="visit-days" value="1" min="1" max="30">
                     </div>
                 </div>
 
-                <div class="meals-section" id="meals-section-container">
-                    <div class="meals-title">🍽️ Nous serons là pour :</div>
-                    
-                    <div class="meal-row">
-                        <label class="meal-checkbox-label">
-                            <input type="checkbox" id="chk-breakfast"> 🥐 Petit-déjeuner
-                        </label>
-                        <select id="sel-breakfast" class="meal-select" disabled></select>
+                <!-- Champs spécifiques aux Aidants -->
+                <div id="caregiver-fields" class="hidden">
+                    <div style="display: flex; gap: 10px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="caregiver-slot">Créneau de la journée</label>
+                            <select id="caregiver-slot">
+                                <option value="morning">🌅 Matin</option>
+                                <option value="afternoon">☀️ Après-midi</option>
+                                <option value="evening">🌙 Soirée</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="caregiver-time">Heure précise (facultatif)</label>
+                            <input type="text" id="caregiver-time" placeholder="Ex: 08h30 - 09h00">
+                        </div>
                     </div>
 
-                    <div class="meal-row">
-                        <label class="meal-checkbox-label">
-                            <input type="checkbox" id="chk-lunch"> 🥗 Déjeuner
-                        </label>
-                        <select id="sel-lunch" class="meal-select" disabled></select>
-                    </div>
-
-                    <div class="meal-row">
-                        <label class="meal-checkbox-label">
-                            <input type="checkbox" id="chk-dinner"> 🍲 Dîner
-                        </label>
-                        <select id="sel-dinner" class="meal-select" disabled></select>
+                    <div style="display: flex; gap: 10px; margin-top: 4px;">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="caregiver-repeat">Passage régulier ?</label>
+                            <select id="caregiver-repeat">
+                                <option value="none">Non (Ponctuel)</option>
+                                <option value="daily">Tous les jours</option>
+                                <option value="weekly">Toutes les semaines</option>
+                                <option value="monthly">Tous les mois</option>
+                            </select>
+                        </div>
+                        <div class="form-group hidden" style="flex: 1;" id="repeat-until-group">
+                            <label for="caregiver-until">Jusqu'au</label>
+                            <input type="date" id="caregiver-until">
+                        </div>
                     </div>
                 </div>
+
+                <!-- Section dynamique pour les repas jour par jour (visites uniquement) -->
+                <div id="meals-section-container"></div>
 
                 <div class="form-group" id="comment-section-container">
                     <label for="visit-comment">Commentaire (facultatif)</label>
@@ -626,66 +678,17 @@
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
-        function initMealSelects() {
-            ['sel-breakfast', 'sel-lunch', 'sel-dinner'].forEach(id => {
-                const select = document.getElementById(id);
-                select.innerHTML = '';
-                for (let i = 1; i <= 10; i++) {
-                    const opt = document.createElement('option');
-                    opt.value = i;
-                    opt.innerText = `${i} pers.`;
-                    select.appendChild(opt);
-                }
-            });
-        }
-        initMealSelects();
-
-        function bindMealCheckbox(chkId, selId) {
-            const chk = document.getElementById(chkId);
-            const sel = document.getElementById(selId);
-            chk.addEventListener('change', () => {
-                sel.disabled = !chk.checked;
-            });
-        }
-        bindMealCheckbox('chk-breakfast', 'sel-breakfast');
-        bindMealCheckbox('chk-lunch', 'sel-lunch');
-        bindMealCheckbox('chk-dinner', 'sel-dinner');
-
-        const eventTypeSelect = document.getElementById("event-type");
-        eventTypeSelect.addEventListener("change", () => {
-            toggleFormFields(eventTypeSelect.value);
-        });
-
-        function toggleFormFields(type) {
-            const labelName = document.getElementById("label-visitor-name");
-            const inputName = document.getElementById("visitor-name");
-            const mealsContainer = document.getElementById("meals-section-container");
-            const commentContainer = document.getElementById("comment-section-container");
-
-            if (type === "absence") {
-                labelName.innerText = "Motif de l'absence";
-                inputName.placeholder = "Ex: Vacances à la mer";
-                mealsContainer.classList.add("hidden");
-                commentContainer.classList.add("hidden");
-            } else {
-                labelName.innerText = "Nom / Prénom";
-                inputName.placeholder = "Ex: Thomas & Julie";
-                mealsContainer.classList.remove("hidden");
-                commentContainer.classList.remove("hidden");
-            }
-        }
-
-        onSnapshot(collection(db, "visits"), (snapshot) => {
-            visits = [];
-            snapshot.forEach((docSnapshot) => {
-                visits.push({ id: docSnapshot.id, ...docSnapshot.data() });
-            });
-            renderCalendar();
-        });
-
         function parseLocalDate(dateStr) {
+            if(!dateStr) return new Date();
             const [year, month, day] = dateStr.split('-').map(Number);
             return new Date(year, month - 1, day);
+        }
+
+        function formatDateToISO(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
         }
 
         function checkPasscode() {
@@ -697,6 +700,151 @@
             return true;
         }
 
+        // Détermine l'ordre d'arrivée chrono d'un événement pour un jour donné
+        function getMealOrderScore(visit, dateISO) {
+            if (visit.type === "absence") return 99; // Absences en dernier
+
+            if (visit.type === "caregiver") {
+                if (visit.timeSlot === "morning") return 0.5;   // Avant/pendant le petit déj
+                if (visit.timeSlot === "afternoon") return 2.5; // Entre déjeuner et dîner
+                if (visit.timeSlot === "evening") return 3.5;   // En soirée
+                return 1.5;
+            }
+
+            if (!visit.dailyMeals || !visit.dailyMeals[dateISO]) return 50; // Visite simple sans détails
+
+            const dayMeals = visit.dailyMeals[dateISO];
+            if (dayMeals.breakfast?.active) return 1; // Présent au petit déjeuner
+            if (dayMeals.lunch?.active) return 2;     // Présent au déjeuner
+            if (dayMeals.dinner?.active) return 3;    // Présent au dîner
+
+            return 4; 
+        }
+
+        document.getElementById("visit-start").addEventListener("change", generateMealsForm);
+        document.getElementById("visit-days").addEventListener("input", generateMealsForm);
+
+        const eventTypeSelect = document.getElementById("event-type");
+        eventTypeSelect.addEventListener("change", () => {
+            toggleFormFields(eventTypeSelect.value);
+        });
+
+        document.getElementById("caregiver-repeat").addEventListener("change", (e) => {
+            const repeatUntil = document.getElementById("repeat-until-group");
+            if (e.target.value !== "none") {
+                repeatUntil.classList.remove("hidden");
+            } else {
+                repeatUntil.classList.add("hidden");
+            }
+        });
+
+        function toggleFormFields(type) {
+            const labelName = document.getElementById("label-visitor-name");
+            const inputName = document.getElementById("visitor-name");
+            const mealsContainer = document.getElementById("meals-section-container");
+            const commentContainer = document.getElementById("comment-section-container");
+            const caregiverFields = document.getElementById("caregiver-fields");
+            const daysContainer = document.getElementById("days-count-container");
+
+            if (type === "absence") {
+                labelName.innerText = "Motif de l'absence";
+                inputName.placeholder = "Ex: Vacances à la mer";
+                mealsContainer.classList.add("hidden");
+                commentContainer.classList.add("hidden");
+                caregiverFields.classList.add("hidden");
+                daysContainer.classList.remove("hidden");
+            } else if (type === "caregiver") {
+                labelName.innerText = "Intervenant / Service";
+                inputName.placeholder = "Ex: Passage Infirmière / Kiné / Menage";
+                mealsContainer.classList.add("hidden");
+                commentContainer.classList.remove("hidden");
+                caregiverFields.classList.remove("hidden");
+                daysContainer.classList.add("hidden"); 
+            } else { // Visite
+                labelName.innerText = "Nom / Prénom";
+                inputName.placeholder = "Ex: Thomas & Julie";
+                mealsContainer.classList.remove("hidden");
+                commentContainer.classList.remove("hidden");
+                caregiverFields.classList.add("hidden");
+                daysContainer.classList.remove("hidden");
+                generateMealsForm();
+            }
+        }
+
+        function generateMealsForm(existingDailyMeals = null) {
+            const mealsContainer = document.getElementById("meals-section-container");
+            if (eventTypeSelect.value !== "visit") return;
+
+            const startStr = document.getElementById("visit-start").value;
+            const daysCount = parseInt(document.getElementById("visit-days").value) || 1;
+
+            mealsContainer.innerHTML = "";
+
+            if (!startStr) {
+                mealsContainer.innerHTML = "<p style='font-size:0.8rem; color:#78716c; font-style:italic;'>Sélectionnez une date de début pour configurer les repas.</p>";
+                return;
+            }
+
+            const startDate = parseLocalDate(startStr);
+
+            for (let i = 0; i < daysCount; i++) {
+                const currentDay = new Date(startDate);
+                currentDay.setDate(startDate.getDate() + i);
+                const dayISO = formatDateToISO(currentDay);
+
+                const dateDisplay = currentDay.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+                const dayBlock = document.createElement("div");
+                dayBlock.className = "day-meals-block";
+
+                const title = document.createElement("div");
+                title.className = "day-meals-title";
+                title.innerText = `🍽️ Repas du ${dateDisplay}`;
+                dayBlock.appendChild(title);
+
+                const dayData = (existingDailyMeals && existingDailyMeals[dayISO]) ? existingDailyMeals[dayISO] : null;
+
+                ['breakfast', 'lunch', 'dinner'].forEach(mealKey => {
+                    const mealLabels = { breakfast: '🥐 Petit-déjeuner', lunch: '🥗 Déjeuner', dinner: '🍲 Dîner' };
+                    
+                    const row = document.createElement("div");
+                    row.className = "meal-row";
+
+                    const isChecked = dayData && dayData[mealKey] && dayData[mealKey].active;
+                    const countVal = (dayData && dayData[mealKey] && dayData[mealKey].count) ? dayData[mealKey].count : 1;
+
+                    row.innerHTML = `
+                        <label class="meal-checkbox-label">
+                            <input type="checkbox" id="chk-${dayISO}-${mealKey}" ${isChecked ? 'checked' : ''}> ${mealLabels[mealKey]}
+                        </label>
+                        <select id="sel-${dayISO}-${mealKey}" class="meal-select" ${!isChecked ? 'disabled' : ''}>
+                            ${[...Array(10).keys()].map(n => `<option value="${n+1}" ${countVal === n+1 ? 'selected' : ''}>${n+1} pers.</option>`).join('')}
+                        </select>
+                    `;
+
+                    dayBlock.appendChild(row);
+                });
+
+                mealsContainer.appendChild(dayBlock);
+
+                ['breakfast', 'lunch', 'dinner'].forEach(mealKey => {
+                    const chk = dayBlock.querySelector(`#chk-${dayISO}-${mealKey}`);
+                    const sel = dayBlock.querySelector(`#sel-${dayISO}-${mealKey}`);
+                    chk.addEventListener('change', () => {
+                        sel.disabled = !chk.checked;
+                    });
+                });
+            }
+        }
+
+        onSnapshot(collection(db, "visits"), (snapshot) => {
+            visits = [];
+            snapshot.forEach((docSnapshot) => {
+                visits.push({ id: docSnapshot.id, ...docSnapshot.data() });
+            });
+            renderCalendar();
+        });
+
         function openModalForAdd() {
             document.getElementById("modal-title").innerText = "➕ Ajouter un événement";
             document.getElementById("visit-id").value = "";
@@ -704,15 +852,17 @@
             toggleFormFields("visit");
 
             document.getElementById("visitor-name").value = "";
-            document.getElementById("visit-start").value = "";
+            
+            const todayStr = formatDateToISO(new Date());
+            document.getElementById("visit-start").value = todayStr;
             document.getElementById("visit-days").value = "1";
             document.getElementById("visit-comment").value = "";
+            document.getElementById("caregiver-slot").value = "morning";
+            document.getElementById("caregiver-time").value = "";
+            document.getElementById("caregiver-repeat").value = "none";
+            document.getElementById("repeat-until-group").classList.add("hidden");
 
-            ['breakfast', 'lunch', 'dinner'].forEach(m => {
-                document.getElementById(`chk-${m}`).checked = false;
-                document.getElementById(`sel-${m}`).disabled = true;
-                document.getElementById(`sel-${m}`).value = "1";
-            });
+            generateMealsForm();
 
             document.getElementById("modal-recap-content").classList.add("hidden");
             document.getElementById("modal-form-content").classList.remove("hidden");
@@ -724,62 +874,91 @@
             document.getElementById("visit-modal").classList.add("active");
         }
 
-        function openModalForView(id) {
+        function openModalForView(id, targetDayISO = null) {
             const visit = visits.find(v => v.id === id);
             if (!visit) return;
 
             const isAbsence = visit.type === "absence";
+            const isCaregiver = visit.type === "caregiver";
 
-            document.getElementById("modal-title").innerText = isAbsence ? "Détails de l'absence" : "📋 Détails de la visite";
+            document.getElementById("modal-title").innerText = isAbsence ? "🚫 Détails de l'absence" : (isCaregiver ? "🧑‍⚕️ Passage d'aidant" : "📋 Détails de la visite");
             document.getElementById("visit-id").value = visit.id;
 
-            document.getElementById("recap-type-label").innerText = isAbsence ? "Absence de Papyves et Maguite" : "Visiteur(s)";
+            let typeLabel = "Visiteur(s)";
+            if (isAbsence) typeLabel = "Absence de Papyves et Maguite";
+            if (isCaregiver) typeLabel = "Intervenant / Aidant";
+
+            document.getElementById("recap-type-label").innerText = typeLabel;
             
             const recapName = document.getElementById("recap-name");
             recapName.innerText = visit.name;
-            recapName.style.color = isAbsence ? "var(--danger)" : "var(--primary-dark)";
+            
+            if (isAbsence) recapName.style.color = "var(--danger)";
+            else if (isCaregiver) recapName.style.color = "var(--caregiver-dark)";
+            else recapName.style.color = "var(--primary-dark)";
 
             const startDate = parseLocalDate(visit.start);
             const endDate = new Date(startDate);
-            endDate.setDate(startDate.getDate() + (visit.days - 1));
+            endDate.setDate(startDate.getDate() + ((visit.days || 1) - 1));
 
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            if (visit.days === 1) {
-                document.getElementById("recap-dates").innerText = `Le ${startDate.toLocaleDateString('fr-FR', options)}`;
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            const activeDateISO = targetDayISO || visit.start;
+            const activeDate = parseLocalDate(activeDateISO);
+
+            if (visit.days > 1) {
+                document.getElementById("recap-dates").innerText = `${activeDate.toLocaleDateString('fr-FR', options)} (Du ${startDate.toLocaleDateString('fr-FR')} au ${endDate.toLocaleDateString('fr-FR')})`;
             } else {
-                document.getElementById("recap-dates").innerText = `Du ${startDate.toLocaleDateString('fr-FR', options)} au ${endDate.toLocaleDateString('fr-FR', options)} (${visit.days} jours)`;
+                document.getElementById("recap-dates").innerText = activeDate.toLocaleDateString('fr-FR', options);
             }
 
             const mealsGroup = document.getElementById("recap-meals-group");
             const commentGroup = document.getElementById("recap-comment-group");
+            const caregiverGroup = document.getElementById("recap-caregiver-info");
 
             if (isAbsence) {
                 mealsGroup.classList.add("hidden");
                 commentGroup.classList.add("hidden");
-            } else {
+                caregiverGroup.classList.add("hidden");
+            } else if (isCaregiver) {
+                mealsGroup.classList.add("hidden");
+                commentGroup.classList.remove("hidden");
+                caregiverGroup.classList.remove("hidden");
+
+                const slotLabels = { morning: '🌅 Matin', afternoon: '☀️ Après-midi', evening: '🌙 Soirée' };
+                let slotText = slotLabels[visit.timeSlot] || 'Créneau non précisé';
+                if (visit.exactTime) {
+                    slotText += ` (${visit.exactTime})`;
+                }
+                document.getElementById("recap-caregiver-slot").innerText = slotText;
+                document.getElementById("recap-comment").innerText = visit.comment ? `« ${visit.comment} »` : "Aucun commentaire.";
+            } else { // Visite
                 mealsGroup.classList.remove("hidden");
                 commentGroup.classList.remove("hidden");
+                caregiverGroup.classList.add("hidden");
 
                 const mealsList = document.getElementById("recap-meals");
                 mealsList.innerHTML = "";
                 let hasMeals = false;
 
-                if (visit.meals) {
-                    if (visit.meals.breakfast?.active) {
-                        mealsList.innerHTML += `<div class="recap-badge-item">🥐 Petit-déjeuner (${visit.meals.breakfast.count} pers.)</div>`;
+                const dayMealData = (visit.dailyMeals && visit.dailyMeals[activeDateISO]) ? visit.dailyMeals[activeDateISO] : null;
+
+                if (dayMealData) {
+                    if (dayMealData.breakfast?.active) {
+                        mealsList.innerHTML += `<div class="recap-badge-item">🥐 Petit-déjeuner (${dayMealData.breakfast.count} pers.)</div>`;
                         hasMeals = true;
                     }
-                    if (visit.meals.lunch?.active) {
-                        mealsList.innerHTML += `<div class="recap-badge-item">🥗 Déjeuner (${visit.meals.lunch.count} pers.)</div>`;
+                    if (dayMealData.lunch?.active) {
+                        mealsList.innerHTML += `<div class="recap-badge-item">🥗 Déjeuner (${dayMealData.lunch.count} pers.)</div>`;
                         hasMeals = true;
                     }
-                    if (visit.meals.dinner?.active) {
-                        mealsList.innerHTML += `<div class="recap-badge-item">🍲 Dîner (${visit.meals.dinner.count} pers.)</div>`;
+                    if (dayMealData.dinner?.active) {
+                        mealsList.innerHTML += `<div class="recap-badge-item">🍲 Dîner (${dayMealData.dinner.count} pers.)</div>`;
                         hasMeals = true;
                     }
                 }
+                
                 if (!hasMeals) {
-                    mealsList.innerHTML = `<span style="color:#78716c; font-style:italic;">Aucun repas spécifié</span>`;
+                    mealsList.innerHTML = `<span style="color:#78716c; font-style:italic;">Aucun repas prévu ce jour-là</span>`;
                 }
 
                 document.getElementById("recap-comment").innerText = visit.comment ? `« ${visit.comment} »` : "Aucun commentaire.";
@@ -803,29 +982,23 @@
             if (!visit) return;
 
             const type = visit.type || "visit";
-            document.getElementById("modal-title").innerText = type === "absence" ? "✏️ Modifier l'absence" : "✏️ Modifier la visite";
+            document.getElementById("modal-title").innerText = type === "absence" ? "✏️ Modifier l'absence" : (type === "caregiver" ? "✏️ Modifier l'aidant" : "✏️ Modifier la visite");
             document.getElementById("event-type").value = type;
             toggleFormFields(type);
 
             document.getElementById("visitor-name").value = visit.name;
             document.getElementById("visit-start").value = visit.start;
-            document.getElementById("visit-days").value = visit.days;
+            document.getElementById("visit-days").value = visit.days || 1;
             document.getElementById("visit-comment").value = visit.comment || "";
 
-            ['breakfast', 'lunch', 'dinner'].forEach(m => {
-                const mealData = visit.meals ? visit.meals[m] : null;
-                const chk = document.getElementById(`chk-${m}`);
-                const sel = document.getElementById(`sel-${m}`);
-                if (mealData && mealData.active) {
-                    chk.checked = true;
-                    sel.disabled = false;
-                    sel.value = mealData.count || 1;
-                } else {
-                    chk.checked = false;
-                    sel.disabled = true;
-                    sel.value = 1;
-                }
-            });
+            if (type === "caregiver") {
+                document.getElementById("caregiver-slot").value = visit.timeSlot || "morning";
+                document.getElementById("caregiver-time").value = visit.exactTime || "";
+                document.getElementById("caregiver-repeat").value = "none";
+                document.getElementById("repeat-until-group").classList.add("hidden");
+            } else if (type === "visit") {
+                generateMealsForm(visit.dailyMeals);
+            }
 
             document.getElementById("modal-recap-content").classList.add("hidden");
             document.getElementById("modal-form-content").classList.remove("hidden");
@@ -862,22 +1035,13 @@
             }
         }
 
-        function formatMealSummary(meals) {
-            if (!meals) return '';
-            const parts = [];
-            if (meals.breakfast?.active) parts.push(`🥐 Petit-déj (${meals.breakfast.count}p)`);
-            if (meals.lunch?.active) parts.push(`🥗 Déjeuner (${meals.lunch.count}p)`);
-            if (meals.dinner?.active) parts.push(`🍲 Dîner (${meals.dinner.count}p)`);
-            return parts.length > 0 ? ' - ' + parts.join(', ') : '';
-        }
-
         function renderCalendar() {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth();
 
             document.getElementById("current-month-label").innerText = `${monthNames[month]} ${year}`;
 
-            // --- 1. RENDU DE LA GRILLE DU MOIS EN COURS ---
+            // --- 1. RENDU DE LA GRILLE ---
             const daysContainer = document.getElementById("calendar-days");
             daysContainer.innerHTML = "";
 
@@ -895,6 +1059,7 @@
             for (let day = 1; day <= totalDays; day++) {
                 const dayDiv = document.createElement("div");
                 const currentDay = new Date(year, month, day);
+                const currentDayISO = formatDateToISO(currentDay);
                 const isWeekend = currentDay.getDay() === 0 || currentDay.getDay() === 6;
 
                 let dayVisits = [];
@@ -903,7 +1068,7 @@
                 visits.forEach(v => {
                     let startDate = parseLocalDate(v.start);
                     let endDate = new Date(startDate);
-                    endDate.setDate(startDate.getDate() + v.days - 1);
+                    endDate.setDate(startDate.getDate() + ((v.days || 1) - 1));
 
                     if (currentDay >= startDate && currentDay <= endDate) {
                         dayVisits.push(v);
@@ -911,6 +1076,11 @@
                             hasAbsence = true;
                         }
                     }
+                });
+
+                // Tri par ordre chrono des repas/créneaux
+                dayVisits.sort((a, b) => {
+                    return getMealOrderScore(a, currentDayISO) - getMealOrderScore(b, currentDayISO);
                 });
 
                 dayDiv.className = `calendar-day ${isWeekend ? 'weekend' : ''} ${hasAbsence ? 'has-absence' : ''}`;
@@ -921,24 +1091,34 @@
 
                 dayVisits.forEach(v => {
                     const isAbsence = v.type === "absence";
+                    const isCaregiver = v.type === "caregiver";
 
                     const tag = document.createElement("div");
                     if (isAbsence) {
                         tag.className = "absence-text";
                         tag.title = v.name;
-                        tag.innerText = v.name;
+                        tag.innerText = `🚫 ${v.name}`;
+                    } else if (isCaregiver) {
+                        tag.className = "caregiver-tag";
+                        const slotIcons = { morning: '🌅', afternoon: '☀️', evening: '🌙' };
+                        const icon = slotIcons[v.timeSlot] || '🧑‍⚕️';
+                        tag.title = `${v.name} (${v.exactTime || v.timeSlot})`;
+                        tag.innerText = `${icon} ${v.name}`;
                     } else {
                         tag.className = "visit-tag";
-                        tag.title = `${v.name}${formatMealSummary(v.meals)}${v.comment ? ' - ' + v.comment : ''}`;
+                        tag.title = `${v.name}${v.comment ? ' - ' + v.comment : ''}`;
                         tag.innerText = v.name;
                     }
-                    tag.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
+                    tag.onclick = (e) => { e.stopPropagation(); openModalForView(v.id, currentDayISO); };
                     dayDiv.appendChild(tag);
 
                     const dot = document.createElement("div");
-                    dot.className = isAbsence ? "absence-dot-bullet" : "visit-dot-bullet";
+                    if (isAbsence) dot.className = "absence-dot-bullet";
+                    else if (isCaregiver) dot.className = "caregiver-dot-bullet";
+                    else dot.className = "visit-dot-bullet";
+                    
                     dot.title = `${v.name} (Cliquer pour détails)`;
-                    dot.onclick = (e) => { e.stopPropagation(); openModalForView(v.id); };
+                    dot.onclick = (e) => { e.stopPropagation(); openModalForView(v.id, currentDayISO); };
                     dotsContainer.appendChild(dot);
                 });
 
@@ -946,14 +1126,14 @@
                 daysContainer.appendChild(dayDiv);
             }
 
-            // --- 2. RENDU DE LA VUE DÉROULANTE (ÉVÉNEMENTS À VENIR UNIQUEMENT) ---
+            // --- 2. RENDU DE LA VUE DÉROULANTE ---
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
             const upcomingVisits = visits.filter(v => {
                 const startDate = parseLocalDate(v.start);
                 const endDate = new Date(startDate);
-                endDate.setDate(startDate.getDate() + v.days - 1);
+                endDate.setDate(startDate.getDate() + ((v.days || 1) - 1));
                 return endDate >= today;
             });
 
@@ -966,26 +1146,37 @@
             } else {
                 upcomingVisits.forEach(v => {
                     const isAbsence = v.type === "absence";
+                    const isCaregiver = v.type === "caregiver";
                     const startDate = parseLocalDate(v.start);
                     const endDate = new Date(startDate);
-                    endDate.setDate(startDate.getDate() + v.days - 1);
+                    endDate.setDate(startDate.getDate() + ((v.days || 1) - 1));
 
                     const optionsDate = { day: 'numeric', month: 'short' };
                     let dateText = "";
-                    if (v.days === 1) {
+                    if ((v.days || 1) === 1) {
                         dateText = startDate.toLocaleDateString('fr-FR', optionsDate);
                     } else {
                         dateText = `${startDate.toLocaleDateString('fr-FR', optionsDate)} - ${endDate.toLocaleDateString('fr-FR', optionsDate)}`;
+                    }
+
+                    let badgeClass = "";
+                    let labelText = v.name;
+                    if (isAbsence) {
+                        badgeClass = "absence";
+                        labelText = `Absence: ${v.name}`;
+                    } else if (isCaregiver) {
+                        badgeClass = "caregiver";
+                        labelText = `🧑‍⚕️ ${v.name} ${v.exactTime ? '('+v.exactTime+')' : ''}`;
+                    } else {
+                        if (v.comment) labelText += ` (${v.comment})`;
                     }
 
                     timelineHtml += `
                         <div class="timeline-item">
                             <div class="timeline-date">🗓️ ${dateText}</div>
                             <div class="timeline-content">
-                                <span class="timeline-badge ${isAbsence ? 'absence' : ''}" data-id="${v.id}">
-                                    <strong>${isAbsence ? 'Absence: ' + v.name : v.name}</strong> 
-                                    ${!isAbsence ? formatMealSummary(v.meals) : ''} 
-                                    ${v.comment && !isAbsence ? '(' + v.comment + ')' : ''}
+                                <span class="timeline-badge ${badgeClass}" data-id="${v.id}">
+                                    <strong>${labelText}</strong>
                                 </span>
                             </div>
                         </div>
@@ -1014,10 +1205,10 @@
             const type = document.getElementById("event-type").value;
             const name = document.getElementById("visitor-name").value.trim();
             const start = document.getElementById("visit-start").value;
-            const days = parseInt(document.getElementById("visit-days").value);
+            let days = parseInt(document.getElementById("visit-days").value) || 1;
 
             if (!name || !start) {
-                alert("Veuillez remplir le titre/nom et la date de début.");
+                alert("Veuillez remplir le nom/intitulé et la date de début.");
                 return;
             }
 
@@ -1025,26 +1216,103 @@
                 if (!checkPasscode()) return;
             }
 
+            // Gestion spécifique des Aidants (et répétitions)
+            if (type === "caregiver") {
+                const timeSlot = document.getElementById("caregiver-slot").value;
+                const exactTime = document.getElementById("caregiver-time").value.trim();
+                const repeat = document.getElementById("caregiver-repeat").value;
+                const comment = document.getElementById("visit-comment").value.trim();
+
+                if (repeat !== "none" && !id) { // Création d'événements récurrents
+                    let untilStr = document.getElementById("caregiver-until").value;
+                    let startDate = parseLocalDate(start);
+                    let untilDate = untilStr ? parseLocalDate(untilStr) : new Date(startDate);
+
+                    if (!untilStr) {
+                        // Par défaut répétition sur 3 mois
+                        untilDate.setMonth(untilDate.getMonth() + 3);
+                    }
+
+                    let datesToAdd = [];
+                    let curr = new Date(startDate);
+
+                    while (curr <= untilDate) {
+                        datesToAdd.push(formatDateToISO(curr));
+
+                        if (repeat === "daily") {
+                            curr.setDate(curr.getDate() + 1);
+                        } else if (repeat === "weekly") {
+                            curr.setDate(curr.getDate() + 7);
+                        } else if (repeat === "monthly") {
+                            curr.setMonth(curr.getMonth() + 1);
+                        }
+                    }
+
+                    for (let dateISO of datesToAdd) {
+                        await addDoc(collection(db, "visits"), {
+                            type: "caregiver",
+                            name,
+                            start: dateISO,
+                            days: 1,
+                            timeSlot,
+                            exactTime,
+                            comment
+                        });
+                    }
+                    closeModal();
+                    return;
+                } else {
+                    let caregiverData = {
+                        type,
+                        name,
+                        start,
+                        days: 1,
+                        timeSlot,
+                        exactTime,
+                        comment
+                    };
+
+                    if (id) {
+                        await updateDoc(doc(db, "visits", id), caregiverData);
+                    } else {
+                        await addDoc(collection(db, "visits"), caregiverData);
+                    }
+                    closeModal();
+                    return;
+                }
+            }
+
             let visitData = { type, name, start, days };
 
             if (type === "visit") {
                 const comment = document.getElementById("visit-comment").value.trim();
-                const meals = {
-                    breakfast: {
-                        active: document.getElementById("chk-breakfast").checked,
-                        count: parseInt(document.getElementById("sel-breakfast").value)
-                    },
-                    lunch: {
-                        active: document.getElementById("chk-lunch").checked,
-                        count: parseInt(document.getElementById("sel-lunch").value)
-                    },
-                    dinner: {
-                        active: document.getElementById("chk-dinner").checked,
-                        count: parseInt(document.getElementById("sel-dinner").value)
-                    }
-                };
+                const dailyMeals = {};
+
+                const startDate = parseLocalDate(start);
+
+                for (let i = 0; i < days; i++) {
+                    const currentDay = new Date(startDate);
+                    currentDay.setDate(startDate.getDate() + i);
+                    const dayISO = formatDateToISO(currentDay);
+
+                    dailyMeals[dayISO] = {
+                        breakfast: {
+                            active: document.getElementById(`chk-${dayISO}-breakfast`)?.checked || false,
+                            count: parseInt(document.getElementById(`sel-${dayISO}-breakfast`)?.value || 1)
+                        },
+                        lunch: {
+                            active: document.getElementById(`chk-${dayISO}-lunch`)?.checked || false,
+                            count: parseInt(document.getElementById(`sel-${dayISO}-lunch`)?.value || 1)
+                        },
+                        dinner: {
+                            active: document.getElementById(`chk-${dayISO}-dinner`)?.checked || false,
+                            count: parseInt(document.getElementById(`sel-${dayISO}-dinner`)?.value || 1)
+                        }
+                    };
+                }
+
                 visitData.comment = comment;
-                visitData.meals = meals;
+                visitData.dailyMeals = dailyMeals;
             }
 
             if (id) {
