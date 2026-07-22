@@ -539,7 +539,7 @@
     <div id="visit-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
-                <h3 id="modal-title">➕ Ajouter un événement</h3>
+                <h3 id="modal-title">Ajouter un événement</h3>
                 <button id="btn-close-modal" class="close-modal">✕</button>
             </div>
             
@@ -579,8 +579,8 @@
                     <label for="event-type">Type d'événement</label>
                     <select id="event-type">
                         <option value="visit">Visite chez Papyves et Maguite</option>
-                        <option value="caregiver">🧑‍⚕️ Passage d'aidants</option>
-                        <option value="absence">🚫 Absence de Papyves et Maguite</option>
+                        <option value="caregiver">Passage d'aidants</option>
+                        <option value="absence">Absence de Papyves et Maguite</option>
                     </select>
                 </div>
 
@@ -606,9 +606,9 @@
                         <div class="form-group" style="flex: 1;">
                             <label for="caregiver-slot">Créneau de la journée</label>
                             <select id="caregiver-slot">
-                                <option value="morning">🌅 Matin</option>
-                                <option value="afternoon">☀️ Après-midi</option>
-                                <option value="evening">🌙 Soirée</option>
+                                <option value="morning">Matin</option>
+                                <option value="afternoon">Après-midi</option>
+                                <option value="evening">Soirée</option>
                             </select>
                         </div>
                         <div class="form-group" style="flex: 1;">
@@ -755,7 +755,7 @@
                 daysContainer.classList.remove("hidden");
             } else if (type === "caregiver") {
                 labelName.innerText = "Intervenant / Service";
-                inputName.placeholder = "Ex: Passage Infirmière / Kiné / Menage";
+                inputName.placeholder = "Ex: Passage Infirmière / Kiné / Ménage";
                 mealsContainer.classList.add("hidden");
                 commentContainer.classList.remove("hidden");
                 caregiverFields.classList.remove("hidden");
@@ -846,7 +846,7 @@
         });
 
         function openModalForAdd() {
-            document.getElementById("modal-title").innerText = "➕ Ajouter un événement";
+            document.getElementById("modal-title").innerText = "Ajouter un événement";
             document.getElementById("visit-id").value = "";
             document.getElementById("event-type").value = "visit";
             toggleFormFields("visit");
@@ -881,7 +881,7 @@
             const isAbsence = visit.type === "absence";
             const isCaregiver = visit.type === "caregiver";
 
-            document.getElementById("modal-title").innerText = isAbsence ? "🚫 Détails de l'absence" : (isCaregiver ? "🧑‍⚕️ Passage d'aidant" : "📋 Détails de la visite");
+            document.getElementById("modal-title").innerText = isAbsence ? "Détails de l'absence" : (isCaregiver ? "Passage d'aidant" : "Détails de la visite");
             document.getElementById("visit-id").value = visit.id;
 
             let typeLabel = "Visiteur(s)";
@@ -924,7 +924,7 @@
                 commentGroup.classList.remove("hidden");
                 caregiverGroup.classList.remove("hidden");
 
-                const slotLabels = { morning: '🌅 Matin', afternoon: '☀️ Après-midi', evening: '🌙 Soirée' };
+                const slotLabels = { morning: 'Matin', afternoon: 'Après-midi', evening: 'Soirée' };
                 let slotText = slotLabels[visit.timeSlot] || 'Créneau non précisé';
                 if (visit.exactTime) {
                     slotText += ` (${visit.exactTime})`;
@@ -982,7 +982,7 @@
             if (!visit) return;
 
             const type = visit.type || "visit";
-            document.getElementById("modal-title").innerText = type === "absence" ? "✏️ Modifier l'absence" : (type === "caregiver" ? "✏️ Modifier l'aidant" : "✏️ Modifier la visite");
+            document.getElementById("modal-title").innerText = type === "absence" ? "Modifier l'absence" : (type === "caregiver" ? "Modifier l'aidant" : "Modifier la visite");
             document.getElementById("event-type").value = type;
             toggleFormFields(type);
 
@@ -1100,10 +1100,8 @@
                         tag.innerText = `🚫 ${v.name}`;
                     } else if (isCaregiver) {
                         tag.className = "caregiver-tag";
-                        const slotIcons = { morning: '🌅', afternoon: '☀️', evening: '🌙' };
-                        const icon = slotIcons[v.timeSlot] || '🧑‍⚕️';
                         tag.title = `${v.name} (${v.exactTime || v.timeSlot})`;
-                        tag.innerText = `${icon} ${v.name}`;
+                        tag.innerText = v.name;
                     } else {
                         tag.className = "visit-tag";
                         tag.title = `${v.name}${v.comment ? ' - ' + v.comment : ''}`;
@@ -1166,7 +1164,7 @@
                         labelText = `Absence: ${v.name}`;
                     } else if (isCaregiver) {
                         badgeClass = "caregiver";
-                        labelText = `🧑‍⚕️ ${v.name} ${v.exactTime ? '('+v.exactTime+')' : ''}`;
+                        labelText = `${v.name} ${v.exactTime ? '('+v.exactTime+')' : ''}`;
                     } else {
                         if (v.comment) labelText += ` (${v.comment})`;
                     }
