@@ -474,6 +474,21 @@
             display: none !important;
         }
 
+        /* Modale pour le choix de série */
+        .series-choice-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .series-choice-buttons button {
+            padding: 12px;
+            font-size: 0.9rem;
+            text-align: left;
+            border-radius: 8px;
+        }
+
         @media (max-width: 768px) {
             body { padding: 6px; }
             .container { padding: 12px; border-radius: 12px; }
@@ -535,7 +550,7 @@
         </div>
     </div>
 
-    <!-- Modale -->
+    <!-- Modale Principale -->
     <div id="visit-modal" class="modal-overlay">
         <div class="modal-card">
             <div class="modal-header">
@@ -656,9 +671,34 @@
         </div>
     </div>
 
+    <!-- Modale de Choix pour les événements récurrents -->
+    <div id="series-choice-modal" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="series-choice-title">Événement récurrent</h3>
+                <button id="btn-close-series-modal" class="close-modal">✕</button>
+            </div>
+            <p id="series-choice-text" style="font-size:0.9rem; color:#444;">Cet événement fait partie d'une série. Que souhaitez-vous modifier ?</p>
+
+            <div class="series-choice-buttons">
+                <button id="btn-series-single" class="toggle-btn">
+                    📌 <strong>Seulement cet événement</strong>
+                    <div style="font-size:0.75rem; color:#666; font-weight:normal; margin-top:2px;">Les autres dates de la série resteront inchangées.</div>
+                </button>
+                <button id="btn-series-all" class="primary-btn" style="text-align:left;">
+                    🔄 <strong>Toute la série</strong>
+                    <div style="font-size:0.75rem; color:#fff; font-weight:normal; margin-top:2px;">Appliquer les modifications à tous les événements de cette série.</div>
+                </button>
+            </div>
+            <div style="text-align:right; margin-top:16px;">
+                <button id="btn-series-cancel">Annuler</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, query, where, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDk4ZaEveUEdbpI1zOM64MShbtLmsL_3eU",
@@ -675,6 +715,7 @@
         let currentDate = new Date();
         let currentView = 'grid';
         let visits = [];
+        let pendingSeriesAction = null; // Stocke l'action de série à effectuer
 
         const monthNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
 
@@ -700,23 +741,27 @@
             return true;
         }
 
+        function generateUniqueId() {
+            return 'series_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
         // Détermine l'ordre d'arrivée chrono d'un événement pour un jour donné
         function getMealOrderScore(visit, dateISO) {
-            if (visit.type === "absence") return 99; // Absences en dernier
+            if (visit.type === "absence") return 99;
 
             if (visit.type === "caregiver") {
-                if (visit.timeSlot === "morning") return 0.5;   // Avant/pendant le petit déj
-                if (visit.timeSlot === "afternoon") return 2.5; // Entre déjeuner et dîner
-                if (visit.timeSlot === "evening") return 3.5;   // En soirée
+                if (visit.timeSlot === "morning") return 0.5;
+                if (visit.timeSlot === "afternoon") return 2.5;
+                if (visit.timeSlot === "evening") return 3.5;
                 return 1.5;
             }
 
-            if (!visit.dailyMeals || !visit.dailyMeals[dateISO]) return 50; // Visite simple sans détails
+            if (!visit.dailyMeals || !visit.dailyMeals[dateISO]) return 50;
 
             const dayMeals = visit.dailyMeals[dateISO];
-            if (dayMeals.breakfast?.active) return 1; // Présent au petit déjeuner
-            if (dayMeals.lunch?.active) return 2;     // Présent au déjeuner
-            if (dayMeals.dinner?.active) return 3;    // Présent au dîner
+            if (dayMeals.breakfast?.active) return 1;
+            if (dayMeals.lunch?.active) return 2;
+            if (dayMeals.dinner?.active) return 3;
 
             return 4; 
         }
@@ -929,6 +974,9 @@
                 if (visit.exactTime) {
                     slotText += ` (${visit.exactTime})`;
                 }
+                if (visit.seriesId) {
+                    slotText += " • 🔄 Série récurrente";
+                }
                 document.getElementById("recap-caregiver-slot").innerText = slotText;
                 document.getElementById("recap-comment").innerText = visit.comment ? `« ${visit.comment} »` : "Aucun commentaire.";
             } else { // Visite
@@ -1010,6 +1058,11 @@
 
         function closeModal() {
             document.getElementById("visit-modal").classList.remove("active");
+        }
+
+        function closeSeriesChoiceModal() {
+            document.getElementById("series-choice-modal").classList.remove("active");
+            pendingSeriesAction = null;
         }
 
         function setView(view) {
@@ -1192,7 +1245,18 @@
         async function saveOrDeleteVisit(isDelete = false) {
             const id = document.getElementById("visit-id").value;
 
+            // CAS 1 : SUPPRESSION
             if (isDelete) {
+                const currentVisit = visits.find(v => v.id === id);
+                if (currentVisit && currentVisit.seriesId) {
+                    // C'est un événement récurrent
+                    pendingSeriesAction = { type: 'delete', visit: currentVisit };
+                    document.getElementById("series-choice-title").innerText = "Supprimer l'événement";
+                    document.getElementById("series-choice-text").innerText = "Cet événement fait partie d'une série récurrente. Que voulez-vous supprimer ?";
+                    document.getElementById("series-choice-modal").classList.add("active");
+                    return;
+                }
+
                 if (confirm("Voulez-vous vraiment supprimer cet événement ?")) {
                     await deleteDoc(doc(db, "visits", id));
                     closeModal();
@@ -1200,6 +1264,7 @@
                 return;
             }
 
+            // CAS 2 : SAUVEGARDE / MODIFICATION
             const type = document.getElementById("event-type").value;
             const name = document.getElementById("visitor-name").value.trim();
             const start = document.getElementById("visit-start").value;
@@ -1214,70 +1279,41 @@
                 if (!checkPasscode()) return;
             }
 
-            // Gestion spécifique des Aidants (et répétitions)
+            // Si on MODIFIE un événement existant d'une série
+            if (id) {
+                const currentVisit = visits.find(v => v.id === id);
+                if (currentVisit && currentVisit.seriesId) {
+                    pendingSeriesAction = { 
+                        type: 'update', 
+                        visit: currentVisit,
+                        newData: gatherFormData()
+                    };
+                    document.getElementById("series-choice-title").innerText = "Modifier l'événement";
+                    document.getElementById("series-choice-text").innerText = "Cet événement fait partie d'une série récurrente. Que voulez-vous modifier ?";
+                    document.getElementById("series-choice-modal").classList.add("active");
+                    return;
+                }
+            }
+
+            await executeSave(id, gatherFormData());
+            closeModal();
+        }
+
+        // Récupère les données du formulaire
+        function gatherFormData() {
+            const type = document.getElementById("event-type").value;
+            const name = document.getElementById("visitor-name").value.trim();
+            const start = document.getElementById("visit-start").value;
+            let days = parseInt(document.getElementById("visit-days").value) || 1;
+
             if (type === "caregiver") {
                 const timeSlot = document.getElementById("caregiver-slot").value;
                 const exactTime = document.getElementById("caregiver-time").value.trim();
                 const repeat = document.getElementById("caregiver-repeat").value;
                 const comment = document.getElementById("visit-comment").value.trim();
+                const until = document.getElementById("caregiver-until").value;
 
-                if (repeat !== "none" && !id) { // Création d'événements récurrents
-                    let untilStr = document.getElementById("caregiver-until").value;
-                    let startDate = parseLocalDate(start);
-                    let untilDate = untilStr ? parseLocalDate(untilStr) : new Date(startDate);
-
-                    if (!untilStr) {
-                        // Par défaut répétition sur 3 mois
-                        untilDate.setMonth(untilDate.getMonth() + 3);
-                    }
-
-                    let datesToAdd = [];
-                    let curr = new Date(startDate);
-
-                    while (curr <= untilDate) {
-                        datesToAdd.push(formatDateToISO(curr));
-
-                        if (repeat === "daily") {
-                            curr.setDate(curr.getDate() + 1);
-                        } else if (repeat === "weekly") {
-                            curr.setDate(curr.getDate() + 7);
-                        } else if (repeat === "monthly") {
-                            curr.setMonth(curr.getMonth() + 1);
-                        }
-                    }
-
-                    for (let dateISO of datesToAdd) {
-                        await addDoc(collection(db, "visits"), {
-                            type: "caregiver",
-                            name,
-                            start: dateISO,
-                            days: 1,
-                            timeSlot,
-                            exactTime,
-                            comment
-                        });
-                    }
-                    closeModal();
-                    return;
-                } else {
-                    let caregiverData = {
-                        type,
-                        name,
-                        start,
-                        days: 1,
-                        timeSlot,
-                        exactTime,
-                        comment
-                    };
-
-                    if (id) {
-                        await updateDoc(doc(db, "visits", id), caregiverData);
-                    } else {
-                        await addDoc(collection(db, "visits"), caregiverData);
-                    }
-                    closeModal();
-                    return;
-                }
+                return { type, name, start, days: 1, timeSlot, exactTime, repeat, until, comment };
             }
 
             let visitData = { type, name, start, days };
@@ -1285,7 +1321,6 @@
             if (type === "visit") {
                 const comment = document.getElementById("visit-comment").value.trim();
                 const dailyMeals = {};
-
                 const startDate = parseLocalDate(start);
 
                 for (let i = 0; i < days; i++) {
@@ -1313,10 +1348,112 @@
                 visitData.dailyMeals = dailyMeals;
             }
 
-            if (id) {
-                await updateDoc(doc(db, "visits", id), visitData);
+            return visitData;
+        }
+
+        // Exécute la création ou mise à jour simple
+        async function executeSave(id, formData) {
+            if (formData.type === "caregiver" && formData.repeat && formData.repeat !== "none" && !id) {
+                // Création d'événements récurrents
+                const newSeriesId = generateUniqueId();
+                let startDate = parseLocalDate(formData.start);
+                let untilDate = formData.until ? parseLocalDate(formData.until) : new Date(startDate);
+
+                if (!formData.until) {
+                    untilDate.setMonth(untilDate.getMonth() + 3);
+                }
+
+                let datesToAdd = [];
+                let curr = new Date(startDate);
+
+                while (curr <= untilDate) {
+                    datesToAdd.push(formatDateToISO(curr));
+
+                    if (formData.repeat === "daily") {
+                        curr.setDate(curr.getDate() + 1);
+                    } else if (formData.repeat === "weekly") {
+                        curr.setDate(curr.getDate() + 7);
+                    } else if (formData.repeat === "monthly") {
+                        curr.setMonth(curr.getMonth() + 1);
+                    }
+                }
+
+                for (let dateISO of datesToAdd) {
+                    await addDoc(collection(db, "visits"), {
+                        type: "caregiver",
+                        name: formData.name,
+                        start: dateISO,
+                        days: 1,
+                        timeSlot: formData.timeSlot,
+                        exactTime: formData.exactTime,
+                        comment: formData.comment,
+                        seriesId: newSeriesId
+                    });
+                }
             } else {
-                await addDoc(collection(db, "visits"), visitData);
+                // Nettoyage des données
+                const payload = { ...formData };
+                delete payload.repeat;
+                delete payload.until;
+
+                if (id) {
+                    await updateDoc(doc(db, "visits", id), payload);
+                } else {
+                    await addDoc(collection(db, "visits"), payload);
+                }
+            }
+        }
+
+        // Traitement du choix utilisateur sur la série (Seulement cet événement / Toute la série)
+        async function handleSeriesChoice(applyToAll) {
+            if (!pendingSeriesAction) return;
+
+            const { type, visit, newData } = pendingSeriesAction;
+            closeSeriesChoiceModal();
+
+            if (type === 'delete') {
+                if (applyToAll) {
+                    // Supprimer toute la série
+                    const q = query(collection(db, "visits"), where("seriesId", "==", visit.seriesId));
+                    const querySnapshot = await getDocs(q);
+                    const batch = writeBatch(db);
+                    querySnapshot.forEach((docSnap) => {
+                        batch.delete(docSnap.ref);
+                    });
+                    await batch.commit();
+                } else {
+                    // Supprimer uniquement cet événement
+                    await deleteDoc(doc(db, "visits", visit.id));
+                }
+            } else if (type === 'update') {
+                if (applyToAll) {
+                    // Modifier toute la série (on conserve les dates individuelles d'origine)
+                    const q = query(collection(db, "visits"), where("seriesId", "==", visit.seriesId));
+                    const querySnapshot = await getDocs(q);
+                    const batch = writeBatch(db);
+
+                    querySnapshot.forEach((docSnap) => {
+                        const updatePayload = {
+                            name: newData.name,
+                            timeSlot: newData.timeSlot,
+                            exactTime: newData.exactTime,
+                            comment: newData.comment
+                        };
+                        batch.update(docSnap.ref, updatePayload);
+                    });
+                    await batch.commit();
+                } else {
+                    // Modifier uniquement cet événement (et lui retirer son appartenance à la série si isolée)
+                    const singlePayload = {
+                        name: newData.name,
+                        start: newData.start,
+                        timeSlot: newData.timeSlot,
+                        exactTime: newData.exactTime,
+                        comment: newData.comment,
+                        seriesId: null // détaché de la série
+                    };
+                    await updateDoc(doc(db, "visits", visit.id), singlePayload);
+                }
             }
 
             closeModal();
@@ -1330,6 +1467,12 @@
         document.getElementById("btn-edit-mode").onclick = switchToEditMode;
         document.getElementById("btn-save-visit").onclick = () => saveOrDeleteVisit(false);
         document.getElementById("btn-delete-visit").onclick = () => saveOrDeleteVisit(true);
+
+        // Modale de choix de série
+        document.getElementById("btn-close-series-modal").onclick = closeSeriesChoiceModal;
+        document.getElementById("btn-series-cancel").onclick = closeSeriesChoiceModal;
+        document.getElementById("btn-series-single").onclick = () => handleSeriesChoice(false);
+        document.getElementById("btn-series-all").onclick = () => handleSeriesChoice(true);
 
         document.getElementById("btn-prev-month").onclick = () => {
             currentDate.setMonth(currentDate.getMonth() - 1);
